@@ -2703,6 +2703,26 @@ body.has-custom-bg.bg-adapt-light .settings-btn {
             </div>
             <!-- ==================== END BACKGROUND IMAGE SETTINGS ==================== -->
 
+            <!-- Server Backend -->
+            <div class="settings-section">
+                <div class="settings-section-title">Server Backend (TTS, Audio)</div>
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
+                    Nhập URL server backend để dùng Edge TTS, gTTS, CapCut... chất lượng cao.
+                    Để trống = dùng Web Speech API của trình duyệt.
+                </p>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="setting-server-url" class="input"
+                        placeholder="https://your-server.onrender.com"
+                        style="flex:1; padding:8px 12px; border-radius:var(--radius-xs); border:1px solid var(--border); background:var(--input-bg); color:var(--text); font-size:14px;">
+                    <button class="btn btn-outline btn-sm" onclick="testServerConnection()" id="server-test-btn">Test</button>
+                </div>
+                <div id="server-status" style="font-size:12px; margin-top:6px; color:var(--text-dim);"></div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button class="btn btn-sm" onclick="saveServerUrl()" style="background:var(--accent); color:#fff; border:none;">Lưu</button>
+                    <button class="btn btn-outline btn-sm" onclick="clearServerUrl()">Xóa</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -2710,14 +2730,63 @@ body.has-custom-bg.bg-adapt-light .settings-btn {
 /* ============================================================
    1. CONSTANTS & CONFIGURATION
 ============================================================ */
-const API_BASE = location.port ? `${location.protocol}//${location.host}` : '';
-const IS_STATIC = !API_BASE;
+const _localApi = location.port ? `${location.protocol}//${location.host}` : '';
+const _savedServer = (localStorage.getItem('server_url') || '').replace(/\/+$/, '');
+let API_BASE = _localApi || _savedServer;
+let IS_STATIC = !API_BASE;
 const CORS_PROXIES = [
     url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
 ];
 let _proxyIdx = 0;
 const audioPool = [new Audio(), new Audio()];
+
+/* ============================================================
+   SERVER URL MANAGEMENT
+============================================================ */
+function _applyServerUrl(url) {
+    API_BASE = url;
+    IS_STATIC = !API_BASE;
+}
+
+async function testServerConnection() {
+    const btn = document.getElementById('server-test-btn');
+    const status = document.getElementById('server-status');
+    const urlInput = document.getElementById('setting-server-url');
+    const url = (urlInput.value || '').trim().replace(/\/+$/, '');
+    if (!url) { status.textContent = 'Vui lòng nhập URL server.'; status.style.color = 'orange'; return; }
+    btn.disabled = true; btn.textContent = '...';
+    status.textContent = 'Đang kết nối...'; status.style.color = 'var(--text-dim)';
+    try {
+        const resp = await fetch(`${url}/api/sites`, { signal: AbortSignal.timeout(10000) });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        status.textContent = 'Kết nối thành công!'; status.style.color = '#4caf50';
+    } catch (e) {
+        status.textContent = 'Lỗi: ' + (e.message || 'Không thể kết nối'); status.style.color = '#f44336';
+    } finally {
+        btn.disabled = false; btn.textContent = 'Test';
+    }
+}
+
+function saveServerUrl() {
+    const urlInput = document.getElementById('setting-server-url');
+    const status = document.getElementById('server-status');
+    const url = (urlInput.value || '').trim().replace(/\/+$/, '');
+    if (!url) { status.textContent = 'URL trống, không lưu.'; status.style.color = 'orange'; return; }
+    localStorage.setItem('server_url', url);
+    _applyServerUrl(url);
+    status.textContent = 'Đã lưu! TTS chất lượng cao đã bật.'; status.style.color = '#4caf50';
+    loadServerVoices();
+}
+
+function clearServerUrl() {
+    const status = document.getElementById('server-status');
+    localStorage.removeItem('server_url');
+    document.getElementById('setting-server-url').value = '';
+    if (!location.port) _applyServerUrl('');
+    status.textContent = 'Đã xóa. Sẽ dùng Web Speech API.'; status.style.color = 'var(--text-dim)';
+    loadServerVoices();
+}
 
 /* ============================================================
    CLIENT-SIDE MODULES (for GitHub Pages / static mode)
@@ -4025,7 +4094,9 @@ function startDownload() {
         return;
     }
 
-    const wsUrl = `ws://${location.host}/ws/download`;
+    const wsProto = API_BASE.startsWith('https') ? 'wss' : 'ws';
+    const wsHost = API_BASE.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProto}://${wsHost}/ws/download`;
     state.ws = new WebSocket(wsUrl);
 
     state.ws.onopen = () => {
@@ -4322,6 +4393,11 @@ function switchTab(tab) {
         updateSliderFill(s);
         s.addEventListener('input', () => updateSliderFill(s));
     });
+
+    const savedServerUrl = localStorage.getItem('server_url');
+    if (savedServerUrl && $('setting-server-url')) {
+        $('setting-server-url').value = savedServerUrl;
+    }
 })();
 
 loadVoices();
