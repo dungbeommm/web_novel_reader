@@ -1,0 +1,32 @@
+# Web scraping & HTTP
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+curl_cffi>=0.7.0
+fake-useragent>=1.5.0
+
+# Async & retry
+tenacity>=8.2.0
+aiohttp>=3.9.0
+aiofiles>=23.0.0
+
+# Web server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+websockets>=12.0
+
+# EPUB
+ebooklib>=0.18
+
+# TTS — Local (không cần API key)
+edge-tts>=0.7.0
+gtts>=2.5.0
+
+# CLI progress
+tqdm>=4.66.0
+
+# Utilities
+python-slugify>=8.0.0
+
+

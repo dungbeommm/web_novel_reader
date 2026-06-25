@@ -1,0 +1,5116 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruyệnAudio — Nghe & Tải Truyện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Georgia&family=Merriweather:wght@400;700&family=Noto+Serif:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+/* ============================================================
+   CSS VARIABLES & THEMES
+============================================================ */
+:root {
+    --accent-h: 265;
+    --accent-s: 80%;
+    --accent-l: 60%;
+    --accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+    --accent-hover: hsl(var(--accent-h), var(--accent-s), calc(var(--accent-l) - 8%));
+    --accent-glow: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+    --accent-subtle: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.12);
+
+    --glass-blur: 22px;
+    --glass-opacity: 0.11;
+
+    --font-reading: 'Inter', system-ui, sans-serif;
+    --font-size-reading: 16px;
+    --line-height-reading: 1.9;
+
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --night-filter: none;
+
+    /* ==== ANIMATION SYSTEM — Biến điều khiển trung tâm ====
+       Mọi hiệu ứng đọc các biến này. Đổi 1 chỗ → áp dụng toàn app.
+       JS chỉ cần setProperty() trên :root, không sửa từng phần tử. */
+    --anim-speed: 250ms;        /* thời lượng chuẩn (transition thường) */
+    --anim-speed-fast: 150ms;   /* micro-interaction (hover, press) */
+    --anim-speed-slow: 400ms;   /* transition lớn (modal, page) */
+    --anim-ease: cubic-bezier(0.22, 1, 0.36, 1);          /* ease-out tự nhiên */
+    --anim-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* nảy nhẹ, sinh động */
+    --anim-enabled: 1;          /* 0 = tắt toàn bộ animation */
+}
+
+[data-theme="dark"] {
+    --bg-deep: #0c0a1a;
+    --bg-gradient: linear-gradient(135deg, #0c0a1a 0%, #1a1040 40%, #0c0a1a 100%);
+    --surface: rgba(255,255,255, var(--glass-opacity));
+    --surface-solid: #1a1535;
+    --surface-hover: rgba(255,255,255, 0.15);
+    --border: rgba(255,255,255, 0.08);
+    --border-accent: rgba(255,255,255, 0.12);
+    --text: #f0eef5;
+    --text-secondary: #a09cb5;
+    --text-dim: #6b6680;
+    --input-bg: rgba(0,0,0, 0.3);
+    --shadow: 0 8px 32px rgba(0,0,0, 0.4);
+    --overlay-bg: rgba(0,0,0, 0.6);
+}
+
+[data-theme="light"] {
+    --bg-deep: #f5f3ff;
+    --bg-gradient: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 40%, #f5f3ff 100%);
+    --surface: rgba(255,255,255, 0.75);
+    --surface-solid: #ffffff;
+    --surface-hover: rgba(255,255,255, 0.9);
+    --border: rgba(0,0,0, 0.12);
+    --border-accent: rgba(0,0,0, 0.2);
+    --text: #1a1535;
+    --text-secondary: #6b6680;
+    --text-dim: #a09cb5;
+    --input-bg: rgba(0,0,0, 0.05);
+    --shadow: 0 8px 32px rgba(0,0,0, 0.08);
+    --overlay-bg: rgba(255,255,255, 0.4);
+}
+
+/* ============================================================
+   NIGHT READER MODES
+============================================================ */
+[data-night="sepia"] {
+    --night-filter: sepia(0.3) brightness(0.95);
+}
+[data-night="dim"] {
+    --night-filter: brightness(0.7) contrast(1.1);
+}
+
+/* ============================================================
+   RESET & BASE
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-deep);
+    background-image: var(--bg-gradient);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    filter: var(--night-filter);
+}
+
+body.no-animations * {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* ============================================================
+   BACKGROUND BLOBS (animated)
+============================================================ */
+.bg-blobs {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.bg-blobs .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: blobFloat 20s ease-in-out infinite;
+}
+
+.blob-1 {
+    width: 500px; height: 500px;
+    background: var(--accent);
+    top: -10%; left: -5%;
+    animation-delay: 0s;
+}
+.blob-2 {
+    width: 400px; height: 400px;
+    background: hsl(calc(var(--accent-h) + 40), 70%, 50%);
+    bottom: -10%; right: -5%;
+    animation-delay: -7s;
+}
+.blob-3 {
+    width: 300px; height: 300px;
+    background: hsl(calc(var(--accent-h) - 40), 60%, 40%);
+    top: 50%; left: 50%;
+    animation-delay: -14s;
+}
+
+@keyframes blobFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+body.no-animations .bg-blobs { display: none; }
+
+/* ============================================================
+   LAYOUT
+============================================================ */
+.app-wrapper {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    max-width: 840px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.main-content {
+    flex: 1;
+    padding: 24px 0 60px;
+}
+
+/* ============================================================
+   HEADER / NAV
+============================================================ */
+/* FIX: Header dùng background bán trong suốt (--surface) + backdrop-filter blur
+   khiến các blob màu phía sau bị smear thành vệt sáng/tối loang lổ ở mép dưới header.
+   Đổi sang --surface-solid (nền đục) để loại bỏ hiệu ứng lỗi này. */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface-solid);
+    border-bottom: 1px solid var(--border);
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+}
+
+.logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.logo-text span {
+    color: var(--accent);
+}
+
+.nav-tabs {
+    display: flex;
+    background: var(--input-bg);
+    border-radius: 100px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.nav-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 100px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.nav-tab.active {
+    background: var(--accent);
+    color: white;
+}
+
+.nav-tab:not(.active):hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.nav-tab svg {
+    width: 16px;
+    height: 16px;
+}
+
+.settings-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
+    backdrop-filter: blur(8px);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.settings-btn:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.settings-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ============================================================
+   GLASS CARD
+============================================================ */
+.glass-card {
+    background: var(--surface);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    will-change: transform;
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+.glass-card:hover {
+    border-color: var(--border-accent);
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-title .icon {
+    font-size: 18px;
+}
+
+/* ============================================================
+   FORM ELEMENTS
+============================================================ */
+.form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+}
+
+.form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.form-input::placeholder {
+    color: var(--text-dim);
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-row > * {
+    flex: 1;
+}
+
+select.form-input {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a09cb5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.btn:not(.btn-primary):hover {
+    border-color: var(--border-accent);
+    background: var(--surface-hover);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    border-radius: var(--radius-sm);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.btn-outline:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: var(--radius-xs);
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: var(--radius-xs);
+}
+
+/* ============================================================
+   TAB CONTENT
+============================================================ */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.empty-state .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.empty-state p .link {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ============================================================
+   LISTEN PAGE — URL INPUT
+============================================================ */
+.url-input-card {
+    padding: 20px 24px;
+}
+
+.url-input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.url-input-row .form-input {
+    flex: 1;
+}
+
+.btn-load {
+    padding: 12px 24px;
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    height: 44px;
+}
+
+.quick-chapters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.quick-chapters span {
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.ch-btn {
+    padding: 4px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ch-btn:hover {
+    background: var(--accent-subtle);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ============================================================
+   LISTEN PAGE — READER CARD
+============================================================ */
+.reader-card {
+    position: relative;
+}
+
+.reader-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.reader-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.reader-title .chapter-count {
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    font-size: 14px;
+}
+
+.pause-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pause-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+}
+
+.chapter-title-line {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+
+.content-reader {
+    font-family: var(--font-reading);
+    font-size: var(--font-size-reading);
+    line-height: var(--line-height-reading);
+    color: var(--text);
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 8px;
+    border-left: 3px solid var(--accent);
+    padding-left: 20px;
+    white-space: pre-wrap;
+}
+
+.content-reader .highlight {
+    background: var(--accent-glow);
+    border-radius: 3px;
+    padding: 2px 0;
+}
+
+
+/* ============================================================
+   LISTEN PAGE — VOICE CARD
+============================================================ */
+.voice-card {
+    padding: 20px 24px;
+    position: relative;
+    z-index: 100;
+    overflow: visible;
+}
+
+.voice-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.voice-row .form-input {
+    flex: 0 1 50%;
+    margin: 0;
+    min-width: 0;
+}
+
+/* Custom voice dropdown */
+.voice-dropdown-wrap {
+    position: relative;
+    flex: 0 1 50%;
+    min-width: 0;
+    z-index: 9999;
+}
+
+.voice-dropdown-trigger {
+    width: 100%;
+    padding: 12px 36px 12px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+}
+
+.voice-dropdown-trigger::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--text-dim);
+    transition: transform 0.2s;
+}
+
+.voice-dropdown-wrap.open .voice-dropdown-trigger::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.voice-dropdown-trigger:hover,
+.voice-dropdown-wrap.open .voice-dropdown-trigger {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.voice-dropdown-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    min-width: 320px;
+    max-height: 380px;
+    background: var(--surface-solid);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow), 0 0 60px rgba(0,0,0,0.3);
+    z-index: 9999;
+    overflow: hidden;
+    flex-direction: column;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transform: translateZ(0);
+}
+
+.voice-dropdown-wrap.open .voice-dropdown-panel {
+    display: flex;
+    animation: vdSlideIn 0.2s ease-out;
+}
+
+@keyframes vdSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.vd-search-wrap {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface-solid);
+    z-index: 1;
+}
+
+.vd-search {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+}
+
+.vd-search:focus {
+    border-color: var(--accent);
+}
+
+.vd-search-wrap svg {
+    position: absolute;
+    left: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    pointer-events: none;
+}
+
+.vd-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 0;
+}
+
+
+.vd-group-label {
+    padding: 8px 16px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    position: sticky;
+    top: 0;
+    background: var(--surface-solid);
+    z-index: 1;
+}
+
+.vd-option {
+    padding: 9px 16px 9px 24px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vd-option:hover {
+    background: var(--accent-subtle);
+    color: var(--text);
+}
+
+.vd-option.selected {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.vd-option.selected::before {
+    content: '✓';
+    font-size: 12px;
+    margin-left: -16px;
+    width: 16px;
+    color: var(--accent);
+}
+
+.vd-option.offline-tag::after {
+    content: 'Offline';
+    font-size: 10px;
+    padding: 1px 6px;
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+.vd-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+}
+
+.provider-filter-btns {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    justify-content: space-evenly;
+}
+
+.provider-filter-btn {
+    flex: 0 0 auto;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.provider-filter-btn .pf-count {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+}
+
+.provider-filter-btn .pf-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.provider-filter-btn:hover {
+    border-color: var(--accent);
+}
+
+.provider-filter-btn.active {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb, 99,102,241), 0.15);
+}
+
+.provider-filter-btn.active .pf-count {
+    color: var(--accent-bright, #22c55e);
+}
+
+.voice-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+/* ============================================================
+   LISTEN PAGE — CONTROLS CARD
+============================================================ */
+.controls-card {
+    padding: 20px 24px;
+}
+
+.sliders-row {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+}
+
+.slider-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.slider-group .slider-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.slider-group .slider-icon {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.slider-group .slider-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.slider-group .slider-limits {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: -4px;
+}
+
+/* === SLIDER: track siêu mảnh 2px, thumb 18px nổi bật, bo tròn === */
+
+.range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 2px;                                    /* track siêu mảnh */
+    background: linear-gradient(to right,
+        var(--accent) 0%,
+        rgba(255,255,255,0.18) 0%);
+    border-radius: 2px;                             /* bo tròn 2 đầu */
+    outline: none;
+    cursor: pointer;
+    min-width: 60px;
+}
+
+.range-slider::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 2px;
+    background: transparent;
+}
+
+/* Thumb: núm tròn 18px, nổi rõ trên track mảnh 2px */
+.range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border: 2.5px solid var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--accent-glow), 0 1px 4px rgba(0,0,0,0.25);
+    margin-top: -8px;                               /* canh giữa: -(18/2 - 2/2) = -8px */
+}
+
+.range-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border: 2.5px solid var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--accent-glow), 0 1px 4px rgba(0,0,0,0.25);
+}
+
+.range-slider::-moz-range-track {
+    height: 2px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+    border: none;
+}
+
+/* Firefox: phần đã chọn (bên trái) = tím */
+.range-slider::-moz-range-progress {
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+/* ============================================================
+   LISTEN PAGE — SEEK BAR
+============================================================ */
+.seek-card {
+    padding: 16px 24px;
+}
+
+.seek-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.seek-row .time {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+}
+
+.seek-row .range-slider {
+    flex: 1;
+}
+
+.seek-pct {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: center;
+}
+
+/* ============================================================
+   LISTEN PAGE — PLAYER CONTROLS
+============================================================ */
+.player-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 0 0;
+}
+
+.ctrl-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ctrl-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.ctrl-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.play-main-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px var(--accent-glow);
+    transition: var(--transition);
+}
+
+.play-main-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 25px var(--accent-glow);
+}
+
+/* ============================================================
+   DOWNLOAD PAGE
+============================================================ */
+.dl-config-card .card-title {
+    color: var(--accent);
+}
+
+.dl-btn-row {
+    margin-top: 20px;
+}
+
+/* ============================================================
+   DOWNLOAD PROGRESS
+============================================================ */
+.progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--input-bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 12px 0;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), hsl(calc(var(--accent-h) + 30), var(--accent-s), var(--accent-l)));
+    border-radius: 3px;
+    transition: width 0.3s;
+    width: 0%;
+}
+
+.dl-status-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.dl-log {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 12px;
+}
+
+.dl-log .error { color: #ef4444; }
+.dl-log .ok { color: #22c55e; }
+
+/* ============================================================
+   SETTINGS MODAL
+============================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    z-index: 1000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    transform: translateZ(0);
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-card {
+    background: var(--surface-solid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-section {
+    margin-bottom: 24px;
+}
+
+.settings-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+}
+
+/* Theme picker */
+.theme-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.theme-option {
+    flex: 1;
+    padding: 10px;
+    background: var(--input-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.theme-option.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+.theme-option:hover:not(.active) {
+    border-color: var(--border-accent);
+}
+
+/* Accent color picker */
+.accent-picker {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.accent-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.accent-dot:hover {
+    transform: scale(1.15);
+}
+
+.accent-dot.active {
+    border-color: white;
+    box-shadow: 0 0 0 2px var(--bg-deep), 0 0 12px currentColor;
+}
+
+/* Slider settings */
+.setting-slider-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.setting-slider-row .label {
+    font-size: 14px;
+    color: var(--text);
+    min-width: 120px;
+}
+
+.setting-slider-row .value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 50px;
+    text-align: right;
+}
+
+.setting-slider-row .range-slider {
+    flex: 1;
+}
+
+/* Toggle switch */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.toggle-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-info .icon {
+    font-size: 18px;
+}
+
+.toggle-info .toggle-text h4 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.toggle-info .toggle-text p {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 26px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(22px);
+}
+
+/* Font picker */
+.font-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.font-option {
+    padding: 6px 16px;
+    background: var(--input-bg);
+    border: 2px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.font-option.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+/* Font-size slider labels */
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+
+/* Night mode picker */
+.night-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.night-option {
+    flex: 1;
+    padding: 10px;
+    background: var(--input-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.night-option.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+/* ============================================================
+   DOWNLOADED LIST
+============================================================ */
+.downloaded-list {
+    list-style: none;
+}
+
+.downloaded-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+}
+
+.downloaded-list li:last-child {
+    border-bottom: none;
+}
+
+/* ============================================================
+   STATUS TEXT
+============================================================ */
+.status-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media (max-width: 768px) {
+    .container { padding: 0 16px; }
+    .header-inner { gap: 8px; }
+    .nav-tab { padding: 6px 14px; font-size: 13px; }
+    .glass-card { padding: 20px; }
+    .form-row { flex-direction: column; gap: 0; }
+    .sliders-row { flex-direction: column; gap: 16px; }
+    .voice-row { flex-wrap: wrap; gap: 12px; }
+    .voice-row .form-input { flex: 1 1 100%; }
+    .provider-filter-btns { width: 100%; }
+    .url-input-row { flex-direction: column; gap: 8px; }
+    .btn-load { width: 100%; }
+}
+
+/* ============================================================
+   SCROLLBAR GLOBAL — ẩn toàn bộ thanh cuộn
+============================================================ */
+* {
+    scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* ============================================================
+   BACKGROUND IMAGE — Lớp ảnh nền do người dùng import
+============================================================ */
+.bg-custom-image {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: none;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.bg-custom-image.active {
+    display: block;
+}
+
+/* Khi có ảnh nền tuỳ chỉnh, ẩn animated blobs và đặt body background thành đen */
+body.has-custom-bg {
+    background-image: none !important;
+    background-color: #000 !important;
+}
+
+body.has-custom-bg .bg-blobs {
+    display: none !important;
+}
+
+/* ============================================================
+   AUTO-CONTRAST — Tự động thích ứng chữ/icon với hình nền
+   Luminance trung bình ảnh nền quyết định lớp body:
+     .bg-adapt-light  → nền sáng  → chữ tối
+     .bg-adapt-dark   → nền tối   → chữ sáng
+   Scrim bán trong suốt + text-shadow đảm bảo WCAG AA (≥4.5:1).
+============================================================ */
+
+/* --- Scrim overlay: lớp phủ bán trong suốt trên nền ảnh, tách chữ khỏi nền nhiễu --- */
+body.has-custom-bg .app-wrapper {
+    position: relative;
+}
+body.has-custom-bg .app-wrapper::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    transition: background 0.4s ease;
+    will-change: transform;
+    transform: translateZ(0);
+}
+/* Nền tối → scrim tối nhẹ (giữ chữ sáng đọc rõ) */
+body.has-custom-bg.bg-adapt-dark .app-wrapper::before {
+    background: rgba(0, 0, 0, 0.35);
+}
+/* Nền sáng → scrim sáng nhẹ (giữ chữ tối đọc rõ) */
+body.has-custom-bg.bg-adapt-light .app-wrapper::before {
+    background: rgba(255, 255, 255, 0.30);
+}
+
+/* --- Màu chữ và icon thích ứng --- */
+body.has-custom-bg.bg-adapt-light {
+    --text: #1a1a2e;
+    --text-secondary: #3a3a5c;
+    --text-dim: #5a5a7a;
+    --border: rgba(0, 0, 0, 0.15);
+    --border-accent: rgba(0, 0, 0, 0.22);
+    --surface: rgba(255, 255, 255, 0.55);
+    --surface-solid: rgba(255, 255, 255, 0.85);
+    --surface-hover: rgba(255, 255, 255, 0.65);
+    --input-bg: rgba(0, 0, 0, 0.08);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+body.has-custom-bg.bg-adapt-dark {
+    --text: #f0eef5;
+    --text-secondary: #c0bdd5;
+    --text-dim: #8a86a0;
+    --border: rgba(255, 255, 255, 0.12);
+    --border-accent: rgba(255, 255, 255, 0.18);
+    --surface: rgba(0, 0, 0, 0.40);
+    --surface-solid: rgba(0, 0, 0, 0.70);
+    --surface-hover: rgba(0, 0, 0, 0.50);
+    --input-bg: rgba(0, 0, 0, 0.35);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Text-shadow tăng cường dễ đọc trên nền phức tạp --- */
+body.has-custom-bg.bg-adapt-dark .card-title,
+body.has-custom-bg.bg-adapt-dark .form-label,
+body.has-custom-bg.bg-adapt-dark .logo-text,
+body.has-custom-bg.bg-adapt-dark .nav-tab,
+body.has-custom-bg.bg-adapt-dark .empty-state h3,
+body.has-custom-bg.bg-adapt-dark .empty-state p,
+body.has-custom-bg.bg-adapt-dark .dl-status-text,
+body.has-custom-bg.bg-adapt-dark .slider-icon,
+body.has-custom-bg.bg-adapt-dark .slider-value,
+body.has-custom-bg.bg-adapt-dark .time,
+body.has-custom-bg.bg-adapt-dark .seek-pct {
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+body.has-custom-bg.bg-adapt-light .card-title,
+body.has-custom-bg.bg-adapt-light .form-label,
+body.has-custom-bg.bg-adapt-light .logo-text,
+body.has-custom-bg.bg-adapt-light .nav-tab,
+body.has-custom-bg.bg-adapt-light .empty-state h3,
+body.has-custom-bg.bg-adapt-light .empty-state p,
+body.has-custom-bg.bg-adapt-light .dl-status-text,
+body.has-custom-bg.bg-adapt-light .slider-icon,
+body.has-custom-bg.bg-adapt-light .slider-value,
+body.has-custom-bg.bg-adapt-light .time,
+body.has-custom-bg.bg-adapt-light .seek-pct {
+    text-shadow: 0 1px 4px rgba(255, 255, 255, 0.6);
+}
+
+/* Header cũng dùng nền đục thích ứng */
+body.has-custom-bg.bg-adapt-dark .header {
+    background: rgba(0, 0, 0, 0.60);
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+body.has-custom-bg.bg-adapt-light .header {
+    background: rgba(255, 255, 255, 0.70);
+    border-bottom-color: rgba(0, 0, 0, 0.10);
+}
+
+/* Glass-card nền thích ứng */
+body.has-custom-bg.bg-adapt-dark .glass-card {
+    background: rgba(0, 0, 0, 0.40);
+    border-color: rgba(255, 255, 255, 0.10);
+}
+body.has-custom-bg.bg-adapt-light .glass-card {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(0, 0, 0, 0.10);
+}
+
+/* Settings button thích ứng */
+body.has-custom-bg.bg-adapt-dark .settings-btn {
+    background: rgba(0, 0, 0, 0.40);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f0eef5;
+}
+body.has-custom-bg.bg-adapt-light .settings-btn {
+    background: rgba(255, 255, 255, 0.60);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1a1a2e;
+}
+
+/* Lớp phủ blur trên ảnh nền */
+.bg-custom-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    display: none;
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+.bg-custom-overlay.active {
+    display: block;
+}
+
+/* ============================================================
+   BACKGROUND IMAGE — Panel điều khiển trong Settings
+============================================================ */
+.bg-import-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.bg-import-row .btn {
+    flex: 1;
+}
+
+.bg-preview-thumb {
+    width: 100%;
+    height: 120px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 12px;
+    display: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-preview-thumb.active {
+    display: block;
+}
+
+.bg-preview-thumb .bg-preview-overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.bg-blur-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.bg-blur-type-btn {
+    padding: 8px 10px;
+    background: var(--input-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.bg-blur-type-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+.bg-blur-type-btn:hover:not(.active) {
+    border-color: var(--border-accent);
+    color: var(--text);
+}
+
+/* ============================================================
+   AUTO-NEXT CHECKBOX
+============================================================ */
+.auto-next-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+}
+
+.auto-next-row input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+/* ============================================================
+   ANIMATION SYSTEM — Hiệu ứng chuyển động đầy đủ
+   Gồm 4 nhóm: Micro-interactions, Page Transitions,
+   Loading Animations, Scroll & Parallax.
+   Mọi hiệu ứng chỉ animate transform + opacity (GPU).
+   Tôn trọng prefers-reduced-motion và biến --anim-enabled.
+============================================================ */
+
+/* --- A. MICRO-INTERACTIONS: phản hồi tức thì cho nút, input, icon --- */
+
+/* A1. Nút bấm: hover scale lên, active nhấn lún */
+.anim-micro .btn,
+.anim-micro .nav-tab,
+.anim-micro .theme-option,
+.anim-micro .night-option,
+.anim-micro .font-option,
+.anim-micro .bg-blur-type-btn,
+.anim-micro .ctrl-btn,
+.anim-micro .play-main-btn,
+.anim-micro .pause-btn {
+    transition: transform var(--anim-speed-fast) var(--anim-ease),
+                opacity var(--anim-speed-fast) var(--anim-ease),
+                background var(--anim-speed-fast) var(--anim-ease),
+                color var(--anim-speed-fast) var(--anim-ease),
+                border-color var(--anim-speed-fast) var(--anim-ease),
+                box-shadow var(--anim-speed-fast) var(--anim-ease);
+}
+
+.anim-micro .btn:hover,
+.anim-micro .nav-tab:hover,
+.anim-micro .theme-option:hover,
+.anim-micro .night-option:hover,
+.anim-micro .font-option:hover,
+.anim-micro .bg-blur-type-btn:hover,
+.anim-micro .ctrl-btn:hover,
+.anim-micro .pause-btn:hover {
+    transform: scale(1.03);
+}
+
+.anim-micro .btn:active,
+.anim-micro .nav-tab:active,
+.anim-micro .theme-option:active,
+.anim-micro .night-option:active,
+.anim-micro .font-option:active,
+.anim-micro .bg-blur-type-btn:active,
+.anim-micro .ctrl-btn:active,
+.anim-micro .play-main-btn:active,
+.anim-micro .pause-btn:active {
+    transform: scale(0.97);
+}
+
+/* A2. Ripple effect — lớp sóng lan từ điểm click trên nút chính */
+.anim-micro .btn-primary,
+.anim-micro .play-main-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.anim-ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(0);
+    animation: animRippleExpand var(--anim-speed-slow) var(--anim-ease) forwards;
+    pointer-events: none;
+}
+
+@keyframes animRippleExpand {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* A3. Input focus — viền sáng dần + glow nhẹ */
+.anim-micro .form-input {
+    transition: border-color var(--anim-speed-fast) var(--anim-ease),
+                box-shadow var(--anim-speed-fast) var(--anim-ease);
+}
+
+.anim-micro .form-input:focus {
+    box-shadow: 0 0 0 3px var(--accent-glow), 0 0 16px var(--accent-glow);
+}
+
+/* A4. Icon hover — xoay/scale nhẹ */
+.anim-micro .settings-btn {
+    transition: transform var(--anim-speed-fast) var(--anim-ease),
+                background var(--anim-speed-fast) var(--anim-ease),
+                color var(--anim-speed-fast) var(--anim-ease),
+                border-color var(--anim-speed-fast) var(--anim-ease);
+}
+
+.anim-micro .settings-btn:hover {
+    transform: rotate(30deg) scale(1.08);
+}
+
+.anim-micro .settings-btn:active {
+    transform: rotate(0deg) scale(0.95);
+}
+
+/* A5. Logo icon hover */
+.anim-micro .logo-icon {
+    transition: transform var(--anim-speed-fast) var(--anim-ease-spring);
+}
+
+.anim-micro .logo:hover .logo-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+/* A6. Toggle switch — mượt hơn với biến anim */
+.anim-micro .toggle-slider {
+    transition: background var(--anim-speed-fast) var(--anim-ease);
+}
+
+.anim-micro .toggle-slider::before {
+    transition: transform var(--anim-speed-fast) var(--anim-ease-spring);
+}
+
+/* A7. Accent dot hover */
+.anim-micro .accent-dot {
+    transition: transform var(--anim-speed-fast) var(--anim-ease-spring),
+                border-color var(--anim-speed-fast) var(--anim-ease),
+                box-shadow var(--anim-speed-fast) var(--anim-ease);
+}
+
+/* A8. Glass card hover lift */
+.anim-micro .glass-card {
+    transition: transform var(--anim-speed) var(--anim-ease),
+                border-color var(--anim-speed) var(--anim-ease),
+                box-shadow var(--anim-speed) var(--anim-ease);
+}
+
+.anim-micro .glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow), 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* --- B. PAGE / VIEW TRANSITIONS: chuyển tab, modal --- */
+
+/* B1. Tab content — fade + slide khi chuyển */
+.anim-page .tab-content.active {
+    animation: animTabIn var(--anim-speed) var(--anim-ease) both;
+}
+
+@keyframes animTabIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* B2. Modal — scale + fade khi mở (chỉ thêm transition, không đè display) */
+.anim-page .modal-overlay.open {
+    animation: animFadeIn var(--anim-speed) var(--anim-ease) both;
+}
+
+.anim-page .modal-overlay.open .modal-card {
+    animation: animModalIn var(--anim-speed) var(--anim-ease-spring) both;
+}
+
+@keyframes animFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes animModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* B3. Nav tab active indicator — slide mượt */
+.anim-page .nav-tab {
+    transition: background var(--anim-speed-fast) var(--anim-ease),
+                color var(--anim-speed-fast) var(--anim-ease),
+                transform var(--anim-speed-fast) var(--anim-ease);
+}
+
+/* B4. Voice dropdown panel — slide-down mượt */
+.anim-page .voice-dropdown-panel {
+    transition: opacity var(--anim-speed-fast) var(--anim-ease),
+                transform var(--anim-speed-fast) var(--anim-ease);
+}
+
+/* --- C. LOADING ANIMATIONS: spinner, skeleton, progress bar --- */
+
+/* C1. Skeleton loader — khối xám nhấp nháy thay nội dung đang tải */
+.anim-loading .anim-skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--input-bg) 25%,
+        var(--surface-hover) 50%,
+        var(--input-bg) 75%
+    );
+    background-size: 200% 100%;
+    animation: animSkeletonShimmer 1.5s linear infinite;
+    border-radius: var(--radius-xs);
+}
+
+@keyframes animSkeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* C2. Spinner mượt — loading khi gọi TTS hoặc tải chương */
+.anim-loading .anim-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: animSpin 0.8s linear infinite;
+    display: inline-block;
+}
+
+@keyframes animSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* C3. Progress bar — chạy mượt không giật */
+.anim-loading .dl-progress-fill {
+    transition: width var(--anim-speed) linear;
+}
+
+/* C4. Fade-out khi loading xong */
+.anim-loading .anim-fade-out {
+    animation: animFadeOut var(--anim-speed) var(--anim-ease) forwards;
+}
+
+@keyframes animFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* C5. Status text fade-in */
+.anim-loading .status-text {
+    transition: opacity var(--anim-speed-fast) var(--anim-ease);
+}
+
+/* --- D. SCROLL & PARALLAX: hiệu ứng khi cuộn --- */
+
+/* D1. Scroll-reveal — phần tử fade-in + slide-up khi cuộn tới */
+.anim-scroll .anim-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity var(--anim-speed-slow) var(--anim-ease),
+                transform var(--anim-speed-slow) var(--anim-ease);
+    will-change: opacity, transform;
+}
+
+.anim-scroll .anim-reveal.anim-revealed {
+    opacity: 1;
+    transform: translateY(0);
+    will-change: auto;
+}
+
+/* D2. Stagger — mỗi phần tử con xuất hiện trễ ~50ms */
+.anim-scroll .anim-stagger > *:nth-child(1) { transition-delay: 0ms; }
+.anim-scroll .anim-stagger > *:nth-child(2) { transition-delay: 50ms; }
+.anim-scroll .anim-stagger > *:nth-child(3) { transition-delay: 100ms; }
+.anim-scroll .anim-stagger > *:nth-child(4) { transition-delay: 150ms; }
+.anim-scroll .anim-stagger > *:nth-child(5) { transition-delay: 200ms; }
+.anim-scroll .anim-stagger > *:nth-child(6) { transition-delay: 250ms; }
+.anim-scroll .anim-stagger > *:nth-child(7) { transition-delay: 300ms; }
+.anim-scroll .anim-stagger > *:nth-child(8) { transition-delay: 350ms; }
+
+/* D3. Parallax — nền cuộn chậm hơn nội dung (--anim-parallax-shift JS) */
+.anim-scroll .bg-blobs {
+    transition: transform 0.1s linear;
+    will-change: transform;
+}
+
+/* --- Tôn trọng prefers-reduced-motion --- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* --- Khi tốc độ = 0 (TẮT) — ghi đè mọi animation/transition --- */
+:root[data-anim-off="true"] *,
+:root[data-anim-off="true"] *::before,
+:root[data-anim-off="true"] *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+}
+
+/* --- Segmented control (chọn tốc độ) dùng trong Settings --- */
+.anim-speed-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.anim-speed-btn {
+    flex: 1;
+    padding: 8px 4px;
+    background: var(--input-bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.anim-speed-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent);
+}
+
+.anim-speed-btn:hover:not(.active) {
+    border-color: var(--border-accent);
+    color: var(--text);
+}
+
+/* --- Easing custom dropdown trong Settings (giống voice dropdown) --- */
+.anim-ease-select {
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.ease-dropdown-wrap {
+    position: relative;
+    width: 100%;
+    z-index: 99;
+}
+
+.ease-dropdown-trigger {
+    width: 100%;
+    padding: 12px 36px 12px 16px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+}
+
+.ease-dropdown-trigger::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--text-dim);
+    transition: transform 0.2s;
+}
+
+.ease-dropdown-wrap.open .ease-dropdown-trigger::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.ease-dropdown-trigger:hover,
+.ease-dropdown-wrap.open .ease-dropdown-trigger {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.ease-dropdown-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface-solid);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow), 0 0 60px rgba(0,0,0,0.3);
+    z-index: 99;
+    overflow: hidden;
+    flex-direction: column;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transform: translateZ(0);
+}
+
+.ease-dropdown-wrap.open .ease-dropdown-panel {
+    display: flex;
+    animation: vdSlideIn 0.2s ease-out;
+}
+
+.ease-dropdown-list {
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+.ease-dropdown-option {
+    padding: 12px 16px 12px 24px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ease-dropdown-option:hover {
+    background: var(--accent-subtle);
+    color: var(--text);
+}
+
+.ease-dropdown-option.selected {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.ease-dropdown-option.selected::before {
+    content: '✓';
+    font-size: 12px;
+    margin-left: -16px;
+    width: 16px;
+    color: var(--accent);
+}
+
+.ease-dropdown-option .ease-opt-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+}
+
+/* --- Toggle nhóm hiệu ứng trong Settings --- */
+.anim-group-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.anim-group-toggles .toggle-row {
+    padding: 10px 14px;
+}
+
+.anim-group-toggles .toggle-info .toggle-text h4 {
+    font-size: 13px;
+}
+
+.anim-group-toggles .toggle-info .toggle-text p {
+    font-size: 11px;
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
+</head>
+<body>
+    <!-- Background blobs -->
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- BACKGROUND IMAGE — ảnh nền do người dùng import -->
+    <div class="bg-custom-image" id="bg-custom-image"></div>
+    <div class="bg-custom-overlay" id="bg-custom-overlay">
+        <canvas id="bg-blur-canvas" style="width:100%;height:100%;display:none;"></canvas>
+    </div>
+
+    <div class="app-wrapper">
+        <!-- ==================== HEADER / NAV ==================== -->
+        <header class="header">
+            <div class="container header-inner">
+                <a class="logo" href="/">
+                    <div class="logo-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    </div>
+                    <div class="logo-text">Truyện<span>Audio</span></div>
+                </a>
+
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="switchTab('listen')" id="nav-listen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                        Nghe Truyện
+                    </button>
+                    <button class="nav-tab" onclick="switchTab('download')" id="nav-download">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Tải Truyện
+                    </button>
+                </div>
+
+                <button class="settings-btn" onclick="toggleModal('settings-modal')" title="Cài đặt">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- ==================== MAIN CONTENT ==================== -->
+        <main class="main-content container">
+
+            <!-- ========== TAB: NGHE TRUYỆN ========== -->
+            <div id="tab-listen" class="tab-content active">
+
+                <!-- URL Input -->
+                <div class="glass-card url-input-card">
+                    <div class="form-label">Liên kết chương truyện</div>
+                    <div class="url-input-row">
+                        <input type="url" id="listen-url" class="form-input"
+                               placeholder="https://truyenfull.vn/ten-truyen/chuong-1/"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();loadAndAutoPlay();}">
+                        <button class="btn btn-primary btn-load" onclick="loadAndAutoPlay()">Tải nội dung</button>
+                    </div>
+                    <div class="quick-chapters" id="quick-chapters" style="display:none">
+                        <span>Chương nhanh:</span>
+                    </div>
+                </div>
+
+                <!-- Reader Panel -->
+                <div class="glass-card reader-card" id="player-card">
+                    <div class="reader-header">
+                        <div class="reader-title">
+                            <span id="p-story-name"></span>
+                            <span class="chapter-count" id="p-chapter-count"></span>
+                        </div>
+                        <button class="pause-btn" id="header-pause-btn" onclick="togglePlay()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                            Tạm dừng
+                        </button>
+                    </div>
+
+                    <div class="chapter-title-line" id="p-chapter-name"></div>
+
+                    <div class="content-reader" id="content-text"></div>
+
+                    <div class="status-text" id="p-status"></div>
+                </div>
+
+                <!-- Voice Selection -->
+                <div class="glass-card voice-card" id="voice-card">
+                    <div class="voice-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                        GIỌNG ĐỌC
+                    </div>
+                    <div class="voice-row">
+                        <select id="voice-select" class="form-input" onchange="onVoiceChange()" style="display:none"></select>
+                        <div class="voice-dropdown-wrap" id="voice-dropdown-wrap">
+                            <button class="voice-dropdown-trigger" id="voice-dropdown-trigger" type="button" onclick="toggleVoiceDropdown()">Chọn giọng đọc</button>
+                            <div class="voice-dropdown-panel" id="voice-dropdown-panel">
+                                <div class="vd-search-wrap">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                                    <input class="vd-search" id="vd-search" type="text" placeholder="Tìm giọng đọc..." oninput="filterVoiceDropdown(this.value)">
+                                </div>
+                                <div class="vd-list" id="vd-list"></div>
+                            </div>
+                        </div>
+                        <div class="provider-filter-btns">
+                            <button class="provider-filter-btn" data-provider="gtts" onclick="filterVoiceProvider('gtts')">GTTS</button>
+                            <button class="provider-filter-btn" data-provider="capcut" onclick="filterVoiceProvider('capcut')">CapCut</button>
+                            <button class="provider-filter-btn" data-provider="edge" onclick="filterVoiceProvider('edge')">Edge</button>
+                            <button class="provider-filter-btn" data-provider="gemini" onclick="filterVoiceProvider('gemini')">Gemini</button>
+                            <button class="provider-filter-btn pf-total" data-provider="all" onclick="filterVoiceProvider('all')">Tổng</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls — Speed / Pitch / Volume -->
+                <div class="glass-card controls-card" id="controls-card">
+                    <div class="sliders-row">
+                        <div class="slider-group">
+                            <div class="slider-top">
+                                <span class="slider-icon">&#9889; TỐC ĐỘ</span>
+                                <span class="slider-value" id="rate-val">1.0x</span>
+                            </div>
+                            <input type="range" class="range-slider" id="speech-rate" min="0.5" max="3" step="0.1" value="1" oninput="updateRate()">
+                            <div class="slider-limits"><span>0.5x</span><span>3.0x</span></div>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-top">
+                                <span class="slider-icon">&#9835; CAO ĐỘ</span>
+                                <span class="slider-value" id="pitch-val">1.0</span>
+                            </div>
+                            <input type="range" class="range-slider" id="speech-pitch" min="0.5" max="2" step="0.1" value="1" oninput="updatePitch()">
+                            <div class="slider-limits"><span>0.5</span><span>2.0</span></div>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-top">
+                                <span class="slider-icon">&#128266; ÂM LƯỢNG</span>
+                                <span class="slider-value" id="volume-val">80%</span>
+                            </div>
+                            <input type="range" class="range-slider" id="speech-volume" min="0" max="100" step="5" value="80" oninput="updateVolume()">
+                            <div class="slider-limits"><span>0%</span><span>100%</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seek Bar -->
+                <div class="glass-card seek-card" id="seek-card">
+                    <div class="seek-row">
+                        <span class="time" id="seek-current-time">0s</span>
+                        <input type="range" class="range-slider" id="seek-bar" min="0" max="100" value="0" oninput="seekTo(this.value)">
+                        <span class="seek-pct" id="seek-pct">0%</span>
+                        <span class="time" id="seek-total-time">0s</span>
+                    </div>
+
+                    <div class="player-bar">
+                        <button class="ctrl-btn" onclick="prevChapter()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                            Chương trước
+                        </button>
+
+                        <button class="play-main-btn" id="play-btn" onclick="togglePlay()">
+                            <svg id="play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                        </button>
+
+                        <button class="ctrl-btn" onclick="nextChapter()">
+                            Chương sau
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 18h2V6h-2zm-8.5-6l8.5 6V6z" transform="scale(-1,1) translate(-24,0)"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="auto-next-row">
+                        <input type="checkbox" id="auto-next-chk" checked onchange="localStorage.setItem('tts_auto_next', this.checked)">
+                        <label for="auto-next-chk" style="cursor:pointer">Tự động chuyển chương kế tiếp</label>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========== TAB: TẢI TRUYỆN ========== -->
+            <div id="tab-download" class="tab-content">
+
+                <!-- Download Config -->
+                <div class="glass-card dl-config-card">
+                    <div class="card-title"><span class="icon">&#128229;</span> Cấu hình tải truyện</div>
+
+                    <div class="form-label">Liên kết chương đầu tiên</div>
+                    <input type="url" id="dl-url" class="form-input" placeholder="https://truyenfull.vn/ten-truyen/chuong-1/">
+
+                    <div class="form-row" style="margin-top:16px">
+                        <div>
+                            <div class="form-label">Chương bắt đầu</div>
+                            <input type="number" id="dl-start" class="form-input" value="1" min="1">
+                        </div>
+                        <div>
+                            <div class="form-label">Chương dừng</div>
+                            <input type="number" id="dl-max" class="form-input" value="" min="0" placeholder="Để trống = tải hết truyện">
+                        </div>
+                    </div>
+
+                    <div class="dl-btn-row">
+                        <button class="btn btn-primary btn-full" id="dl-start-btn" onclick="startDownload()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            Bắt đầu tải
+                        </button>
+                        <button class="btn btn-danger btn-full" id="dl-stop-btn" onclick="stopDownload()" style="display:none">Dừng tải</button>
+                    </div>
+                </div>
+
+                <!-- Progress Card -->
+                <div class="glass-card" id="dl-progress-card" style="display:none">
+                    <div class="card-title" id="dl-title">Đang tải...</div>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="dl-progress-bar"></div>
+                    </div>
+                    <div class="dl-status-text" id="dl-status">Chuẩn bị...</div>
+                    <div class="dl-log" id="dl-log"></div>
+                </div>
+
+                <!-- Results Card -->
+                <div class="glass-card" id="dl-results-card" style="display:none">
+                    <div class="card-title">Kết quả</div>
+                    <div id="dl-results"></div>
+                    <div style="margin-top:12px">
+                        <button class="btn btn-primary" id="dl-zip-btn" onclick="downloadZip()" style="display:none">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Tải ZIP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="glass-card" id="dl-empty-state">
+                    <div class="empty-state">
+                        <div class="empty-icon">&#128194;</div>
+                        <h3>Sẵn sàng tải truyện</h3>
+                        <p>Nhập link truyện và số chương cần tải,<br>sau đó nhấn <span class="link">Bắt đầu tải</span> để tiến hành.</p>
+                    </div>
+                </div>
+
+                <!-- Downloaded List -->
+                <div class="glass-card" id="dl-list-card" style="display:none">
+                    <div class="card-title">Truyện đã tải</div>
+                    <ul class="downloaded-list" id="downloaded-list"></ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== SETTINGS MODAL ==================== -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="toggleModal('settings-modal')">&#10005;</button>
+            <div class="modal-title">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Cài đặt
+            </div>
+
+            <!-- Theme -->
+            <div class="settings-section">
+                <div class="settings-section-title">Giao diện (Theme)</div>
+                <div class="theme-picker">
+                    <button class="theme-option" onclick="setTheme('light')" data-theme-btn="light">
+                        &#9728; &#127793; Sáng
+                    </button>
+                    <button class="theme-option active" onclick="setTheme('dark')" data-theme-btn="dark">
+                        &#127769; &#127769; Tối
+                    </button>
+                    <button class="theme-option" onclick="setTheme('auto')" data-theme-btn="auto">
+                        &#128187; &#128187; Tự động
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accent Color -->
+            <div class="settings-section">
+                <div class="settings-section-title">Màu nhấn (Accent)</div>
+                <div class="accent-picker">
+                    <div class="accent-dot active" style="background: hsl(265, 80%, 60%)" onclick="setAccent(265, 80, 60, this)" title="Purple"></div>
+                    <div class="accent-dot" style="background: hsl(220, 80%, 55%)" onclick="setAccent(220, 80, 55, this)" title="Blue"></div>
+                    <div class="accent-dot" style="background: hsl(330, 80%, 60%)" onclick="setAccent(330, 80, 60, this)" title="Pink"></div>
+                    <div class="accent-dot" style="background: hsl(25, 85%, 55%)" onclick="setAccent(25, 85, 55, this)" title="Orange"></div>
+                    <div class="accent-dot" style="background: hsl(160, 70%, 45%)" onclick="setAccent(160, 70, 45, this)" title="Green"></div>
+                    <div class="accent-dot" style="background: hsl(0, 75%, 55%)" onclick="setAccent(0, 75, 55, this)" title="Red"></div>
+                    <div class="accent-dot" style="background: hsl(45, 90%, 55%)" onclick="setAccent(45, 90, 55, this)" title="Yellow"></div>
+                    <div class="accent-dot" style="background: hsl(185, 80%, 55%)" onclick="setAccent(185, 80, 55, this)" title="Cyan"></div>
+                </div>
+            </div>
+
+            <!-- Glass Effect -->
+            <div class="settings-section">
+                <div class="settings-section-title">Hiệu ứng kính (Glass)</div>
+                <div class="setting-slider-row" style="margin-bottom:16px">
+                    <span class="label">Độ mờ (Blur)</span>
+                    <input type="range" class="range-slider" id="setting-blur" min="0" max="40" value="22"
+                           oninput="setGlassBlur(this.value)">
+                    <span class="value" id="blur-val">22px</span>
+                </div>
+                <div class="setting-slider-row">
+                    <span class="label">Độ trong suốt</span>
+                    <input type="range" class="range-slider" id="setting-opacity" min="0" max="30" value="11"
+                           oninput="setGlassOpacity(this.value)">
+                    <span class="value" id="opacity-val">11%</span>
+                </div>
+            </div>
+
+            <!-- Animations -->
+            <div class="settings-section">
+                <div class="settings-section-title">Hiệu ứng chuyển động</div>
+                <div class="toggle-row">
+                    <div class="toggle-info">
+                        <span class="icon">&#9889;</span>
+                        <div class="toggle-text">
+                            <h4>Hiệu ứng sinh động</h4>
+                            <p>Tắt nếu máy chạy chậm / tiết kiệm pin</p>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-animations" checked onchange="toggleAnimations(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <!-- ANIMATION SYSTEM — Bảng điều khiển chi tiết -->
+                <div id="anim-controls" style="margin-top:14px;">
+                    <!-- Chọn tốc độ animation -->
+                    <div style="font-size:13px;color:var(--text);margin-bottom:8px;font-weight:600;">Tốc độ hiệu ứng</div>
+                    <div class="anim-speed-picker" id="anim-speed-picker">
+                        <button class="anim-speed-btn" data-speed="off" onclick="setAnimSpeed('off',this)">Tắt</button>
+                        <button class="anim-speed-btn" data-speed="slow" onclick="setAnimSpeed('slow',this)">Chậm</button>
+                        <button class="anim-speed-btn active" data-speed="normal" onclick="setAnimSpeed('normal',this)">Vừa</button>
+                        <button class="anim-speed-btn" data-speed="fast" onclick="setAnimSpeed('fast',this)">Nhanh</button>
+                    </div>
+
+                    <!-- Chọn kiểu easing -->
+                    <div style="font-size:13px;color:var(--text);margin-bottom:8px;font-weight:600;">Kiểu chuyển động</div>
+                    <div class="anim-ease-select">
+                        <select class="form-input" id="anim-ease-select" onchange="setAnimEasing(this.value)" style="display:none">
+                            <option value="ease-out" selected>Ease-out (tự nhiên)</option>
+                            <option value="ease-in-out">Ease-in-out (mềm mại)</option>
+                            <option value="spring">Spring (nảy nhẹ)</option>
+                            <option value="linear">Linear (đều)</option>
+                        </select>
+                        <div class="ease-dropdown-wrap" id="ease-dropdown-wrap">
+                            <button class="ease-dropdown-trigger" id="ease-dropdown-trigger" type="button" onclick="toggleEaseDropdown()">Ease-out (tự nhiên)</button>
+                            <div class="ease-dropdown-panel" id="ease-dropdown-panel">
+                                <div class="ease-dropdown-list" id="ease-dropdown-list"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle từng nhóm hiệu ứng -->
+                    <div style="font-size:13px;color:var(--text);margin-bottom:8px;font-weight:600;">Nhóm hiệu ứng</div>
+                    <div class="anim-group-toggles">
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="icon">&#128073;</span>
+                                <div class="toggle-text">
+                                    <h4>Micro-interactions</h4>
+                                    <p>Hover, nhấn nút, ripple, focus input</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="anim-group-micro" checked onchange="toggleAnimGroup('micro',this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="icon">&#128260;</span>
+                                <div class="toggle-text">
+                                    <h4>Page Transitions</h4>
+                                    <p>Chuyển tab, mở/đóng modal</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="anim-group-page" checked onchange="toggleAnimGroup('page',this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="icon">&#9203;</span>
+                                <div class="toggle-text">
+                                    <h4>Loading Animations</h4>
+                                    <p>Spinner, skeleton, progress bar</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="anim-group-loading" checked onchange="toggleAnimGroup('loading',this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="icon">&#128587;</span>
+                                <div class="toggle-text">
+                                    <h4>Scroll & Parallax</h4>
+                                    <p>Fade-in khi cuộn, parallax nền, stagger</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="anim-group-scroll" checked onchange="toggleAnimGroup('scroll',this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <!-- /ANIMATION SYSTEM controls -->
+            </div>
+
+            <!-- Typography -->
+            <div class="settings-section">
+                <div class="settings-section-title">Kiểu chữ vùng đọc</div>
+
+                <div style="margin-bottom:14px">
+                    <div style="font-size:14px;color:var(--text);margin-bottom:8px">Font chữ</div>
+                    <div class="font-picker">
+                        <button class="font-option active" onclick="setFont('Inter', this)" style="font-family:Inter">Inter</button>
+                        <button class="font-option" onclick="setFont('Georgia', this)" style="font-family:Georgia">Georgia</button>
+                        <button class="font-option" onclick="setFont('Merriweather', this)" style="font-family:Merriweather">Merriweather</button>
+                        <button class="font-option" onclick="setFont('Noto Serif', this)" style="font-family:'Noto Serif'">Noto Serif</button>
+                        <button class="font-option" onclick="setFont('Roboto Mono', this)" style="font-family:'Roboto Mono'">Roboto Mono</button>
+                    </div>
+                </div>
+
+                <div class="setting-slider-row" style="margin-bottom:8px">
+                    <span class="label">Cỡ chữ</span>
+                    <input type="range" class="range-slider" id="setting-fontsize" min="12" max="26" value="16"
+                           oninput="setFontSize(this.value)">
+                    <span class="value" id="fontsize-val">16px</span>
+                </div>
+                <div class="slider-labels"><span>12px</span><span>26px</span></div>
+
+                <div class="setting-slider-row" style="margin-top:14px;margin-bottom:8px">
+                    <span class="label">Giãn dòng</span>
+                    <input type="range" class="range-slider" id="setting-lineheight" min="1.2" max="2.2" step="0.1" value="1.9"
+                           oninput="setLineHeight(this.value)">
+                    <span class="value" id="lineheight-val">1.9</span>
+                </div>
+                <div class="slider-labels"><span>1.2</span><span>2.2</span></div>
+            </div>
+
+            <!-- Night mode -->
+            <div class="settings-section">
+                <div class="settings-section-title">Chế độ đọc đêm</div>
+                <div class="night-picker">
+                    <button class="night-option active" onclick="setNightMode('normal', this)">&#127793; Bình thường</button>
+                    <button class="night-option" onclick="setNightMode('sepia', this)">&#127800; Sepia</button>
+                    <button class="night-option" onclick="setNightMode('dim', this)">&#127761; Đêm</button>
+                </div>
+            </div>
+
+            <!-- ==================== BACKGROUND IMAGE SETTINGS ==================== -->
+            <div class="settings-section">
+                <div class="settings-section-title">Ảnh nền tuỳ chỉnh</div>
+                <!-- Hidden file input -->
+                <input type="file" id="bg-file-input" accept="image/jpeg,image/png,image/webp,image/*" style="display:none">
+                <!-- Import / Remove buttons -->
+                <div class="bg-import-row">
+                    <button class="btn" onclick="document.getElementById('bg-file-input').click()">&#128247; Import ảnh nền</button>
+                    <button class="btn" id="bg-remove-btn" onclick="bgRemoveImage()" style="display:none">&#128465; Xoá ảnh nền</button>
+                </div>
+                <!-- Preview thumbnail -->
+                <div class="bg-preview-thumb" id="bg-preview-thumb">
+                    <div class="bg-preview-overlay" id="bg-preview-overlay"></div>
+                </div>
+                <!-- Blur type grid -->
+                <div class="settings-section-title" id="bg-blur-title" style="display:none">Kiểu hiệu ứng mờ</div>
+                <div class="bg-blur-type-grid" id="bg-blur-type-grid" style="display:none">
+                    <button class="bg-blur-type-btn active" data-blur="gaussian">Gaussian</button>
+                    <button class="bg-blur-type-btn" data-blur="box">Box blur</button>
+                    <button class="bg-blur-type-btn" data-blur="motion">Motion blur</button>
+                    <button class="bg-blur-type-btn" data-blur="radial">Radial / Zoom</button>
+                    <button class="bg-blur-type-btn" data-blur="bokeh">Lens / Bokeh</button>
+                    <button class="bg-blur-type-btn" data-blur="frosted">Frosted glass</button>
+                    <button class="bg-blur-type-btn" data-blur="tiltshift">Tilt-shift</button>
+                    <button class="bg-blur-type-btn" data-blur="pixelate">Pixelate</button>
+                </div>
+                <!-- Blur intensity slider -->
+                <div id="bg-blur-slider-wrap" style="display:none">
+                    <div class="settings-section-title">Độ mờ: <span id="bg-blur-value">10</span>px</div>
+                    <input type="range" id="bg-blur-slider" min="0" max="40" value="10" style="width:100%">
+                </div>
+            </div>
+            <!-- ==================== END BACKGROUND IMAGE SETTINGS ==================== -->
+
+        </div>
+    </div>
+
+<script>
+/* ============================================================
+   1. CONSTANTS & CONFIGURATION
+============================================================ */
+const API_BASE = location.port ? `${location.protocol}//${location.host}` : '';
+const IS_STATIC = !API_BASE;
+const CORS_PROXIES = [
+    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+];
+let _proxyIdx = 0;
+const audioPool = [new Audio(), new Audio()];
+
+/* ============================================================
+   CLIENT-SIDE MODULES (for GitHub Pages / static mode)
+============================================================ */
+
+// --- CORS Proxy Fetch ---
+async function corsFetch(url) {
+    let lastErr;
+    for (let attempt = 0; attempt < CORS_PROXIES.length; attempt++) {
+        const proxyFn = CORS_PROXIES[(_proxyIdx + attempt) % CORS_PROXIES.length];
+        try {
+            const resp = await fetch(proxyFn(url));
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            _proxyIdx = (_proxyIdx + attempt) % CORS_PROXIES.length;
+            return await resp.text();
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+    throw new Error('Không thể tải trang: ' + (lastErr?.message || 'Proxy lỗi'));
+}
+
+// --- Content Cleaner (port of core/cleaner.py) ---
+const REMOVE_SELECTORS = [
+    'script','style','iframe','noscript','.ads','.advertisement','.ad-container',
+    '[class*="quang-cao"]','.comment','.comments','#comments','.fb-comments',
+    '.navigation','.chapter-nav','.nav-chapter','.btn-nav','.breadcrumb',
+    '.social-share','.share','footer','header','nav','.watermark',
+    '[class*="watermark"]','.report','.bookmark','.rating',
+    '[class*="footer"]','[class*="header"]','[class*="menu"]','[class*="sidebar"]',
+    '.sidebar','.notice','.alert','.warning'
+];
+const SPAM_PATTERNS = [
+    /truyện được lấy từ.*?\.com/gi,
+    /nguồn:?\s*https?:\/\/\S+/gi,
+    /đọc truyện.*?tại.*?\.com/gi,
+    /chương trước|chương sau|chương tiếp/gi,
+    /← trước|sau →/gi,
+    /www\.\S+\.com/gi,
+    /^\s*quảng cáo\s*$/gi,
+];
+const HIDDEN_DOTS_RE = /(?<=[a-zA-ZÀ-ỹĐđ])\.(?=[a-zA-ZÀ-ỹĐđ])/g;
+
+function cleanContent(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    REMOVE_SELECTORS.forEach(sel => {
+        try { doc.querySelectorAll(sel).forEach(el => el.remove()); } catch (_) {}
+    });
+    doc.querySelectorAll('*').forEach(el => {
+        el.getAttributeNames().forEach(attr => {
+            if (/^on/i.test(attr)) el.removeAttribute(attr);
+        });
+    });
+    let text = doc.body ? doc.body.innerText || doc.body.textContent : '';
+    const lines = text.split('\n').filter(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return false;
+        return !SPAM_PATTERNS.some(re => { re.lastIndex = 0; return re.test(trimmed); });
+    });
+    text = lines.join('\n');
+    text = text.replace(HIDDEN_DOTS_RE, ' ');
+    text = text.replace(/\n{3,}/g, '\n\n');
+    return text.trim();
+}
+
+// --- Site Adapters (port of sites/metruyenchuvn.py and sites/wikicv.py) ---
+const SITE_ADAPTERS = {
+    metruyenchuvn: {
+        domains: ['metruyenchuvn.com', 'metruyenchu.com'],
+        contentSel: '#chapter-c, .chapter-c, #chapterbody, .chapter-content, .truyen',
+        titleSel: 'h2.heading, .chapter-title, a.chapter-title',
+        nextSel: 'a#next_chap, a.next, a[title*="Chương sau"], a[title*="chương sau"]',
+        nextTextPatterns: ['chương sau', 'chương tiếp', 'next'],
+        storyTitleSel: 'h1.truyen-title, .story-title, a.truyen-title',
+        authorSel: 'a[href*="tac-gia"], .author, span[itemprop="author"]',
+        chapterListSel: 'ul.list-chapter a[href], .list-chapter a[href]',
+        getTocUrl(url) {
+            return url.replace(/\/chuong-\d+.*$/i, '/');
+        },
+    },
+    wikicv: {
+        domains: ['wikicv.net', 'wikicv.com'],
+        contentSel: '.content-body-wrapper, .entry-content, .text-content, #content, .chapter-content, .reading-content, .content-chapter',
+        titleSel: 'h1.entry-title, h2.entry-title, .chapter-title, h1.name-chapter, .heading-chapter',
+        nextSel: 'a.next, a[rel="next"], a.next-chap, a.btn-next',
+        nextTextPatterns: ['chương sau', 'chương tiếp', 'next', 'chuong-tiep'],
+        storyTitleSel: '.story-name, .truyen-title, a.story-name, h1.story-title',
+        authorSel: 'a[href*="tac-gia"], .author, .story-author',
+        chapterListSel: 'ul.list-chapter a[href], .list-chapter a[href], .chapter-list a[href]',
+        getTocUrl(url) {
+            return url.replace(/\/chuong-\d+.*$/i, '/');
+        },
+    },
+};
+
+function getAdapterForUrl(url) {
+    try {
+        const hostname = new URL(url).hostname.replace(/^www\./, '');
+        for (const [, adapter] of Object.entries(SITE_ADAPTERS)) {
+            if (adapter.domains.some(d => hostname === d || hostname.endsWith('.' + d))) {
+                return adapter;
+            }
+        }
+    } catch (_) {}
+    return null;
+}
+
+function findNextUrl(doc, adapter, baseUrl) {
+    let nextEl = doc.querySelector(adapter.nextSel);
+    if (nextEl) {
+        const href = nextEl.getAttribute('href');
+        if (href && href !== '#') return new URL(href, baseUrl).href;
+    }
+    const allLinks = doc.querySelectorAll('a[href]');
+    for (const a of allLinks) {
+        const text = (a.textContent || '').toLowerCase().trim();
+        const href = a.getAttribute('href') || '';
+        if (adapter.nextTextPatterns.some(p => text.includes(p) || href.includes(p))) {
+            if (href && href !== '#') return new URL(href, baseUrl).href;
+        }
+    }
+    return '';
+}
+
+async function clientLoadChapter(url) {
+    const adapter = getAdapterForUrl(url);
+    if (!adapter) throw new Error('Site không được hỗ trợ. Hỗ trợ: metruyenchuvn.com, wikicv.net');
+
+    const html = await corsFetch(url);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    const contentEl = doc.querySelector(adapter.contentSel);
+    if (!contentEl) throw new Error('Không tìm thấy nội dung chương');
+    const rawContent = contentEl.innerHTML;
+    const content = cleanContent(rawContent);
+    if (!content) throw new Error('Nội dung trống sau khi làm sạch');
+
+    const titleEl = doc.querySelector(adapter.titleSel);
+    const title = titleEl ? titleEl.textContent.trim() : 'Chương không rõ';
+
+    const storyTitleEl = doc.querySelector(adapter.storyTitleSel);
+    const storyTitle = storyTitleEl ? storyTitleEl.textContent.trim() : '';
+
+    const nextUrl = findNextUrl(doc, adapter, url);
+
+    return { title, content, story_title: storyTitle, next_url: nextUrl, chapter_url: url };
+}
+
+// --- Client-side TTS (Web Speech API fallback) ---
+const ClientTTSEngine = {
+    _utt: null,
+    _onEndCb: null,
+
+    async play(text, opts) {
+        this.stop();
+        return new Promise((resolve) => {
+            const utt = new SpeechSynthesisUtterance(text);
+            const voices = speechSynthesis.getVoices();
+            const voiceId = opts.voice || '';
+            const voiceName = voiceId.startsWith('web:') ? voiceId.slice(4) : voiceId;
+            let selected = voiceName ? voices.find(v => v.name === voiceName) : null;
+            if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith('vi'));
+            if (selected) utt.voice = selected;
+            utt.lang = 'vi-VN';
+            utt.rate = opts.rate || 1.0;
+            utt.pitch = opts.pitch || 1.0;
+            utt.volume = opts.volume != null ? opts.volume : 1.0;
+            utt.onend = () => {
+                this._utt = null;
+                if (opts.onEnd) opts.onEnd();
+                resolve();
+            };
+            utt.onerror = (e) => {
+                this._utt = null;
+                if (opts.onError) opts.onError(e);
+                resolve();
+            };
+            this._utt = utt;
+            speechSynthesis.speak(utt);
+        });
+    },
+
+    pause() { speechSynthesis.pause(); },
+    resume() { speechSynthesis.resume(); },
+    stop() {
+        speechSynthesis.cancel();
+        this._utt = null;
+    },
+};
+
+// --- Client-side Download (JSZip) ---
+async function clientStartDownload(url, startCh, maxCh, onProgress, onDone, onError) {
+    const adapter = getAdapterForUrl(url);
+    if (!adapter) { onError('Site không được hỗ trợ'); return; }
+
+    let currentUrl = url;
+    let downloaded = 0;
+    let storyTitle = '';
+    const chapters = [];
+    const errors = [];
+
+    while (currentUrl) {
+        if (maxCh > 0 && downloaded >= maxCh) break;
+        if (state._dlAbort) break;
+        const chNum = downloaded + startCh;
+        try {
+            const data = await clientLoadChapter(currentUrl);
+            if (!storyTitle && data.story_title) storyTitle = data.story_title;
+            chapters.push({ title: data.title, content: data.content });
+            downloaded++;
+            onProgress({
+                story_title: storyTitle || 'Đang tải...',
+                status: 'Đang tải',
+                total_downloaded: downloaded,
+                current_chapter: data.title,
+            });
+            currentUrl = data.next_url;
+            if (currentUrl) await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+        } catch (e) {
+            errors.push(`Chương ${chNum}: ${e.message}`);
+            break;
+        }
+    }
+
+    if (chapters.length === 0) {
+        onError('Không tải được chương nào');
+        return;
+    }
+
+    try {
+        const JSZip = window.JSZip || (await import('https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js')).default;
+        const zip = new JSZip();
+        const folder = zip.folder(storyTitle || 'truyen');
+        chapters.forEach((ch, i) => {
+            folder.file(`chuong-${i + startCh}.txt`, `${ch.title}\n\n${ch.content}`);
+        });
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (storyTitle || 'truyen') + '.zip';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    } catch (e) {
+        onError('Lỗi tạo ZIP: ' + e.message);
+        return;
+    }
+
+    onDone({ story_title: storyTitle, total: downloaded, errors });
+}
+
+/* ============================================================
+   2. APPLICATION STATE
+============================================================ */
+const state = {
+    chapterUrl: '',
+    nextUrl: '',
+    history: [],
+    historyIdx: -1,
+
+    isPlaying: false,
+    currentIdx: 0,
+    paragraphs: [],
+    playToken: 0,
+    wasPaused: false,
+
+    voiceList: [],
+    defaultVoice: '',
+
+    activeAudio: 0,
+    prefetched: {},
+    nextChapterCache: null,
+    pipelineRunning: false,
+    pipelineCancel: 0,
+    pipelineQueue: null,
+    prefetchingNextChapter: false,
+
+    ws: null,
+    storyFolder: '',
+    totalChapters: 0,
+};
+
+/* ============================================================
+   3. UTILITY FUNCTIONS
+============================================================ */
+function $(id) { return document.getElementById(id); }
+
+function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function requireServer() {
+    return true;
+}
+
+function setStatus(text, isError) {
+    const el = $('p-status');
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = isError ? '#ef4444' : 'var(--text-secondary)';
+}
+
+function currentVoice() { return $('voice-select').value || state.defaultVoice; }
+function currentRate() { return Math.max(0.5, Math.min(3.0, parseFloat($('speech-rate').value) || 1.0)); }
+function currentPitch() { return parseFloat($('speech-pitch').value) || 1.0; }
+function currentVolume() { return (parseInt($('speech-volume').value, 10) || 80) / 100; }
+
+function splitParagraphs(content, firstChunkSmall) {
+    if (firstChunkSmall === undefined) firstChunkSmall = true;
+    const merged = content.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!merged) return [];
+
+    const FIRST_LIMIT = firstChunkSmall ? 15 : 35;
+    const NORMAL_LIMIT = 35;
+    const sentences = merged.split(/(?<=[.!?…"\"。])\s+/);
+    const out = [];
+    let buf = '';
+    let wordCount = 0;
+    let isFirst = true;
+
+    for (const sentence of sentences) {
+        const sWords = sentence.split(/\s+/).length;
+        const limit = isFirst ? FIRST_LIMIT : NORMAL_LIMIT;
+        if (wordCount + sWords > limit && buf) {
+            out.push(buf.trim());
+            buf = sentence;
+            wordCount = sWords;
+            isFirst = false;
+        } else {
+            buf = buf ? buf + ' ' + sentence : sentence;
+            wordCount += sWords;
+        }
+    }
+    if (buf.trim()) out.push(buf.trim());
+    if (out.length === 0) out.push(merged);
+    return out;
+}
+
+/* ============================================================
+   4. TTS ENGINE — Server
+============================================================ */
+const ServerTTSEngine = {
+    _token: 0,
+    _preloadedIdx: -1,
+
+    async play(text, opts) {
+        this._token++;
+        const token = this._token;
+        const voice = opts.voice || state.defaultVoice;
+        const body = { text, voice_id: voice, speed: 1.0, pitch: opts.pitch || 1.0 };
+        const idx = opts._idx;
+
+        let blobUrl;
+        const cached = state.prefetched[idx];
+        if (cached && cached.voice === voice) {
+            blobUrl = cached.blobUrl;
+        } else {
+            try {
+                const resp = await fetch(`${API_BASE}/api/tts/synthesize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!resp.ok) throw new Error('TTS loi (' + resp.status + ')');
+                const blob = await resp.blob();
+                blobUrl = URL.createObjectURL(blob);
+                if (cached && cached.blobUrl) URL.revokeObjectURL(cached.blobUrl);
+                state.prefetched[idx] = { blobUrl, voice };
+            } catch (e) {
+                if (token !== this._token) return;
+                if (opts.onError) opts.onError(e);
+                return;
+            }
+        }
+        if (token !== this._token) return;
+
+        const nextSlot = 1 - state.activeAudio;
+        const audio = audioPool[nextSlot];
+
+        const alreadyLoaded = this._preloadedIdx === idx;
+        if (!alreadyLoaded) {
+            audio.src = blobUrl;
+        }
+        audio.volume = opts.volume != null ? opts.volume : 1.0;
+        audio.playbackRate = opts.rate || 1.0;
+
+        audio.onended = () => {
+            if (token !== this._token) return;
+            if (opts.onEnd) opts.onEnd();
+        };
+        audio.onerror = () => {
+            if (token !== this._token) return;
+            if (opts.onError) opts.onError(new Error('Audio playback error'));
+        };
+
+        try {
+            if (!alreadyLoaded) {
+                await new Promise((resolve, reject) => {
+                    audio.oncanplaythrough = resolve;
+                    audio.onerror = reject;
+                    audio.load();
+                });
+                if (token !== this._token) return;
+                audio.onerror = () => {
+                    if (token !== this._token) return;
+                    if (opts.onError) opts.onError(new Error('Audio playback error'));
+                };
+            }
+            state.activeAudio = nextSlot;
+            this._preloadedIdx = -1;
+            audio.playbackRate = opts.rate || 1.0;
+            await audio.play();
+        } catch (e) {
+            if (token !== this._token) return;
+            if (opts.onError) opts.onError(e);
+            return;
+        }
+
+        this._preloadNext(idx + 1, voice);
+        prefetchPipeline(idx + 1, voice, 8);
+
+        if (state.nextUrl && state.paragraphs.length - idx <= 8) {
+            prefetchNextChapter(state.nextUrl, voice);
+        }
+    },
+
+    _preloadNext(nextIdx, voice) {
+        if (nextIdx >= state.paragraphs.length) return;
+        const nextSlot = 1 - state.activeAudio;
+        const nextAudioEl = audioPool[nextSlot];
+
+        const cached = state.prefetched[nextIdx];
+        if (cached && cached.voice === voice) {
+            nextAudioEl.src = cached.blobUrl;
+            nextAudioEl.preload = 'auto';
+            nextAudioEl.playbackRate = currentRate();
+            nextAudioEl.load();
+            this._preloadedIdx = nextIdx;
+        }
+    },
+
+    pause() { audioPool[state.activeAudio].pause(); },
+    resume() {
+        const a = audioPool[state.activeAudio];
+        a.playbackRate = currentRate();
+        a.play().catch(() => {});
+    },
+    stop() {
+        this._token++;
+        this._preloadedIdx = -1;
+        audioPool.forEach(a => { try { a.pause(); a.removeAttribute('src'); } catch (e) {} });
+        invalidatePrefetch();
+    },
+};
+
+function getCurrentEngine() {
+    return IS_STATIC ? ClientTTSEngine : ServerTTSEngine;
+}
+
+/* ============================================================
+   5. AUDIO PREFETCH PIPELINE
+============================================================ */
+async function fetchAudioForCache(idx, voice) {
+    if (IS_STATIC) return null;
+    const cached = state.prefetched[idx];
+    if (cached && cached.voice === voice) return cached.blobUrl;
+
+    const body = { text: state.paragraphs[idx], voice_id: voice, speed: 1.0, pitch: currentPitch() };
+    const resp = await fetch(`${API_BASE}/api/tts/synthesize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!resp.ok) throw new Error('TTS loi');
+
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    if (cached && cached.blobUrl) URL.revokeObjectURL(cached.blobUrl);
+    state.prefetched[idx] = { blobUrl, voice };
+    return blobUrl;
+}
+
+async function prefetchPipeline(startIdx, voice, count) {
+    if (IS_STATIC) return;
+    const cancel = ++state.pipelineCancel;
+    state.pipelineQueue = { startIdx, voice, count, cancel };
+    if (state.pipelineRunning) return;
+    state.pipelineRunning = true;
+    const CONCURRENCY = 3;
+    try {
+        while (state.pipelineQueue) {
+            const job = state.pipelineQueue;
+            state.pipelineQueue = null;
+            const endIdx = Math.min(job.startIdx + job.count, state.paragraphs.length);
+            const indices = [];
+            for (let i = job.startIdx; i < endIdx; i++) {
+                if (job.cancel !== state.pipelineCancel) break;
+                const cached = state.prefetched[i];
+                if (cached && cached.voice === job.voice) continue;
+                indices.push(i);
+            }
+            for (let b = 0; b < indices.length; b += CONCURRENCY) {
+                if (job.cancel !== state.pipelineCancel) break;
+                const batch = indices.slice(b, b + CONCURRENCY);
+                await Promise.all(batch.map(async i => {
+                    try {
+                        await fetchAudioForCache(i, job.voice);
+                        if (state.isPlaying && ServerTTSEngine._preloadedIdx < 0
+                            && i === state.currentIdx + 1) {
+                            ServerTTSEngine._preloadNext(i, job.voice);
+                        }
+                    } catch (_) {}
+                }));
+            }
+        }
+    } finally {
+        state.pipelineRunning = false;
+    }
+}
+
+async function prefetchNextChapter(nextUrl, voice) {
+    if (!nextUrl || state.nextChapterCache?.url === nextUrl || state.prefetchingNextChapter) return;
+    state.prefetchingNextChapter = true;
+    try {
+        let data;
+        if (IS_STATIC) {
+            data = await clientLoadChapter(nextUrl);
+        } else {
+            const resp = await fetch(`${API_BASE}/api/chapter?url=${encodeURIComponent(nextUrl)}`);
+            if (!resp.ok) return;
+            data = await resp.json();
+        }
+        const nextParagraphs = splitParagraphs(data.content);
+        const audioCache = {};
+        if (!IS_STATIC) {
+            const prefetchCount = Math.min(8, nextParagraphs.length);
+            const promises = [];
+            for (let i = 0; i < prefetchCount; i++) {
+                const body = { text: nextParagraphs[i], voice_id: voice, speed: 1.0, pitch: currentPitch() };
+                promises.push(
+                    fetch(`${API_BASE}/api/tts/synthesize`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    }).then(r => r.ok ? r.blob() : null).then(blob => {
+                        if (blob) audioCache[i] = { blobUrl: URL.createObjectURL(blob), voice };
+                    }).catch(() => {})
+                );
+            }
+            await Promise.all(promises);
+        }
+        state.nextChapterCache = { url: nextUrl, data, paragraphs: nextParagraphs, audio: audioCache };
+    } catch (e) {
+    } finally {
+        state.prefetchingNextChapter = false;
+    }
+}
+
+function invalidatePrefetch(skipIdx) {
+    state.pipelineCancel++;
+    for (const k in state.prefetched) {
+        if (skipIdx != null && String(k) === String(skipIdx)) continue;
+        if (state.prefetched[k] && state.prefetched[k].blobUrl) URL.revokeObjectURL(state.prefetched[k].blobUrl);
+        delete state.prefetched[k];
+    }
+}
+
+/* ============================================================
+   6. VOICE LOADING
+============================================================ */
+async function loadServerVoices() {
+    const sel = $('voice-select');
+    if (IS_STATIC) {
+        sel.innerHTML = '';
+        state.voiceList = [];
+        const loadWebVoices = () => {
+            const voices = speechSynthesis.getVoices();
+            if (voices.length === 0) return;
+            const viVoices = voices.filter(v => v.lang && v.lang.startsWith('vi'));
+            const allVoices = viVoices.length > 0 ? viVoices : voices.slice(0, 20);
+            const group = document.createElement('optgroup');
+            group.label = `Web Speech API (${allVoices.length})`;
+            allVoices.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = `web:${v.name}`;
+                opt.textContent = `${v.name} (${v.lang})`;
+                group.appendChild(opt);
+                state.voiceList.push({
+                    voice_id: `web:${v.name}`,
+                    name: v.name,
+                    language: v.lang,
+                    provider: 'Web Speech API',
+                    gender: '',
+                    tier: 'Browser',
+                    icon: 'web',
+                });
+            });
+            sel.innerHTML = '';
+            sel.appendChild(group);
+            state.defaultVoice = allVoices.length > 0 ? `web:${allVoices[0].name}` : '';
+            syncVoiceTriggerLabel();
+        };
+        loadWebVoices();
+        if (speechSynthesis.getVoices().length === 0) {
+            speechSynthesis.onvoiceschanged = loadWebVoices;
+        }
+        return;
+    }
+
+    if (!API_BASE) {
+        sel.innerHTML = '<option value="">Server không kết nối</option>';
+        return;
+    }
+
+    try {
+        const resp = await fetch(`${API_BASE}/api/tts/voices`);
+        const data = await resp.json();
+        const allVoices = data.voices || {};
+        state.defaultVoice = data.default || '';
+
+        sel.innerHTML = '';
+        state.voiceList = [];
+        const voiceEntries = Object.entries(allVoices);
+        if (voiceEntries.length === 0) {
+            sel.innerHTML = '<option value="">Chưa có giọng nào</option>';
+            return;
+        }
+
+        const groups = {
+            edge: [], gtts: [], capcut: [],
+            gcloud: [], azure: [], openai: [], gemini: [],
+        };
+        const providerMatch = {
+            'Edge TTS': 'edge', 'Google TTS (Free)': 'gtts', 'CapCut TTS': 'capcut',
+            'Google Cloud': 'gcloud', 'Azure': 'azure', 'OpenAI': 'openai', 'Gemini': 'gemini',
+        };
+
+        for (const [, v] of voiceEntries) {
+            state.voiceList.push(v);
+            const key = providerMatch[v.provider] || v.icon || 'edge';
+            if (groups[key]) groups[key].push(v);
+        }
+
+        const groupConfig = [
+            ['edge',   'Edge TTS Neural'],
+            ['gtts',   'Google TTS Free'],
+            ['capcut', 'CapCut TTS'],
+            ['gcloud', 'Google Cloud TTS'],
+            ['azure',  'Azure TTS'],
+            ['openai', 'OpenAI TTS'],
+            ['gemini', 'Gemini TTS'],
+        ];
+
+        for (const [key, label] of groupConfig) {
+            const voices = groups[key];
+            if (voices.length === 0) continue;
+            const group = document.createElement('optgroup');
+            group.label = `${label} (${voices.length})`;
+            voices.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.voice_id;
+                let lbl = v.name;
+                if (v.is_offline) lbl += ' [Offline]';
+                opt.textContent = lbl;
+                group.appendChild(opt);
+            });
+            sel.appendChild(group);
+        }
+
+        updateProviderCounts(groups);
+
+        const saved = localStorage.getItem('tts_voice_server');
+        if (saved && allVoices[saved]) {
+            sel.value = saved;
+        } else if (state.defaultVoice && allVoices[state.defaultVoice]) {
+            sel.value = state.defaultVoice;
+        }
+        syncVoiceTriggerLabel();
+    } catch (e) {
+        sel.innerHTML = '<option value="">Không kết nối được server TTS</option>';
+        syncVoiceTriggerLabel();
+    }
+}
+
+function updateProviderCounts(groups) {
+    const btns = document.querySelectorAll('.provider-filter-btn');
+    let total = 0;
+    for (const key in groups) total += groups[key].length;
+    btns.forEach(btn => {
+        const key = btn.dataset.provider;
+        if (key === 'all') {
+            btn.innerHTML = `<span class="pf-count">${total}</span><span class="pf-label">Tổng</span>`;
+        } else {
+            const count = (groups[key] || []).length;
+            const labels = { gtts: 'GTTS', capcut: 'CapCut', edge: 'Edge', gemini: 'Gemini' };
+            btn.innerHTML = `<span class="pf-count">${count}</span><span class="pf-label">${labels[key]}</span>`;
+        }
+    });
+}
+
+function loadVoices() {
+    loadServerVoices();
+}
+
+/* Custom voice dropdown logic */
+function buildVoiceDropdownList() {
+    const sel = $('voice-select');
+    const list = $('vd-list');
+    list.innerHTML = '';
+    const groups = sel.querySelectorAll('optgroup');
+    if (groups.length === 0) {
+        list.innerHTML = '<div class="vd-empty">Chưa có giọng nào</div>';
+        return;
+    }
+    groups.forEach(og => {
+        if (og.style.display === 'none') return;
+        const lbl = document.createElement('div');
+        lbl.className = 'vd-group-label';
+        lbl.textContent = og.label;
+        list.appendChild(lbl);
+        og.querySelectorAll('option').forEach(opt => {
+            const div = document.createElement('div');
+            div.className = 'vd-option';
+            if (opt.value === sel.value) div.classList.add('selected');
+            if (opt.textContent.includes('[Offline]')) div.classList.add('offline-tag');
+            div.textContent = opt.textContent.replace(' [Offline]', '');
+            div.dataset.value = opt.value;
+            div.onclick = () => selectVoiceOption(opt.value, div);
+            list.appendChild(div);
+        });
+    });
+}
+
+function selectVoiceOption(value, el) {
+    const sel = $('voice-select');
+    sel.value = value;
+    onVoiceChange();
+    $('vd-list').querySelectorAll('.vd-option').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    const trigger = $('voice-dropdown-trigger');
+    trigger.textContent = el.textContent;
+    closeVoiceDropdown();
+}
+
+function toggleVoiceDropdown() {
+    const wrap = $('voice-dropdown-wrap');
+    if (wrap.classList.contains('open')) {
+        closeVoiceDropdown();
+    } else {
+        wrap.classList.add('open');
+        buildVoiceDropdownList();
+        const search = $('vd-search');
+        search.value = '';
+        setTimeout(() => search.focus(), 50);
+    }
+}
+
+function closeVoiceDropdown() {
+    $('voice-dropdown-wrap').classList.remove('open');
+}
+
+function filterVoiceDropdown(query) {
+    const q = query.toLowerCase();
+    const list = $('vd-list');
+    let anyVisible = false;
+    list.querySelectorAll('.vd-group-label').forEach(lbl => {
+        let groupHasVisible = false;
+        let next = lbl.nextElementSibling;
+        while (next && !next.classList.contains('vd-group-label')) {
+            const match = next.textContent.toLowerCase().includes(q);
+            next.style.display = match ? '' : 'none';
+            if (match) groupHasVisible = true;
+            next = next.nextElementSibling;
+        }
+        lbl.style.display = groupHasVisible ? '' : 'none';
+        if (groupHasVisible) anyVisible = true;
+    });
+    let empty = list.querySelector('.vd-empty');
+    if (!anyVisible) {
+        if (!empty) {
+            empty = document.createElement('div');
+            empty.className = 'vd-empty';
+            list.appendChild(empty);
+        }
+        empty.textContent = 'Không tìm thấy giọng nào';
+        empty.style.display = '';
+    } else if (empty) {
+        empty.style.display = 'none';
+    }
+}
+
+function syncVoiceTriggerLabel() {
+    const sel = $('voice-select');
+    const trigger = $('voice-dropdown-trigger');
+    if (!trigger) return;
+    const opt = sel.selectedOptions[0];
+    trigger.textContent = opt ? opt.textContent : 'Chọn giọng đọc';
+}
+
+document.addEventListener('click', e => {
+    const wrap = $('voice-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) closeVoiceDropdown();
+});
+
+/* ============================================================
+   7. TTS SETTINGS HANDLERS
+============================================================ */
+function onVoiceChange() {
+    localStorage.setItem('tts_voice_server', currentVoice());
+    if (state.isPlaying) {
+        const idx = state.currentIdx;
+        getCurrentEngine().stop();
+        playFrom(idx);
+    } else {
+        invalidatePrefetch();
+    }
+}
+
+state._activeProviderFilter = null;
+
+function filterVoiceProvider(provider) {
+    const sel = $('voice-select');
+    const btns = document.querySelectorAll('.provider-filter-btn');
+
+    if (state._activeProviderFilter === provider || provider === 'all') {
+        state._activeProviderFilter = null;
+        btns.forEach(b => b.classList.remove('active'));
+        for (const og of sel.querySelectorAll('optgroup')) {
+            og.style.display = '';
+        }
+        if (provider === 'all') {
+            btns.forEach(b => { if (b.dataset.provider === 'all') b.classList.add('active'); });
+        }
+        buildVoiceDropdownList();
+        syncVoiceTriggerLabel();
+        return;
+    }
+
+    state._activeProviderFilter = provider;
+    btns.forEach(b => {
+        b.classList.toggle('active', b.dataset.provider === provider);
+    });
+
+    const providerLabels = { gtts: 'Google TTS Free', capcut: 'CapCut TTS', edge: 'Edge TTS Neural', gemini: 'Gemini TTS' };
+    const target = providerLabels[provider] || '';
+
+    let firstMatch = null;
+    for (const og of sel.querySelectorAll('optgroup')) {
+        const match = og.label.startsWith(target);
+        og.style.display = match ? '' : 'none';
+        if (match && !firstMatch) firstMatch = og.querySelector('option');
+    }
+
+    if (firstMatch && sel.selectedOptions[0]?.parentElement?.style.display === 'none') {
+        sel.value = firstMatch.value;
+        onVoiceChange();
+    }
+    buildVoiceDropdownList();
+    syncVoiceTriggerLabel();
+}
+
+/* Cập nhật fill slider: trái = tím (accent), phải = tối mờ */
+/* Cập nhật gradient fill real-time: tím bên trái, xám mờ bên phải theo vị trí núm */
+function updateSliderFill(slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const val = parseFloat(slider.value);
+    const pct = ((val - min) / (max - min)) * 100;
+    slider.style.background = `linear-gradient(to right, var(--accent) ${pct}%, rgba(255,255,255,0.18) ${pct}%)`;
+}
+
+let _rateDebounce = 0;
+function updateRate() {
+    const val = currentRate();
+    $('rate-val').textContent = val.toFixed(1) + 'x';
+    localStorage.setItem('tts_rate', String(val));
+    updateSliderFill($('speech-rate'));
+    audioPool.forEach(a => { a.playbackRate = val; });
+}
+
+let _pitchDebounce = 0;
+function updatePitch() {
+    const val = currentPitch();
+    $('pitch-val').textContent = val.toFixed(1);
+    localStorage.setItem('tts_pitch', String(val));
+    updateSliderFill($('speech-pitch'));
+    if (state.isPlaying) {
+        clearTimeout(_pitchDebounce);
+        _pitchDebounce = setTimeout(() => {
+            const idx = state.currentIdx;
+            invalidatePrefetch(idx);
+            playFrom(idx);
+        }, 600);
+    }
+}
+
+function updateVolume() {
+    const pct = parseInt($('speech-volume').value, 10) || 80;
+    $('volume-val').textContent = pct + '%';
+    localStorage.setItem('tts_volume', String(pct));
+    audioPool.forEach(a => { a.volume = pct / 100; });
+    updateSliderFill($('speech-volume'));
+}
+
+/* ============================================================
+   8. CHAPTER LOADING
+============================================================ */
+async function loadAndAutoPlay(url) {
+    const ok = await loadChapter(url, true);
+    if (ok) playFrom(0);
+}
+
+async function loadChapter(url, preloadFirst) {
+    const chapterUrl = url || $('listen-url').value.trim();
+    if (!chapterUrl) return alert('Vui lòng nhập link chương');
+
+    setStatus('Đang tải nội dung chương...');
+    showPlayerCards();
+    stopSpeech();
+    state.nextChapterCache = null;
+
+    try {
+        let data;
+        if (IS_STATIC) {
+            data = await clientLoadChapter(chapterUrl);
+        } else {
+            const resp = await fetch(`${API_BASE}/api/chapter?url=${encodeURIComponent(chapterUrl)}`);
+            if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+            data = await resp.json();
+        }
+
+        state.chapterUrl = chapterUrl;
+        state.nextUrl = data.next_url || '';
+        $('listen-url').value = chapterUrl;
+
+        if (state.historyIdx < 0 || state.history[state.historyIdx] !== chapterUrl) {
+            state.historyIdx++;
+            state.history[state.historyIdx] = chapterUrl;
+            state.history.length = state.historyIdx + 1;
+        }
+
+        $('p-story-name').textContent = data.story_title || '';
+        $('p-chapter-name').textContent = data.title;
+        $('content-text').textContent = data.content;
+        setStatus('Sẵn sàng phát');
+
+        state.paragraphs = splitParagraphs(data.content, true);
+        state.currentIdx = 0;
+        updateSeekBar();
+        updateQuickChapters(chapterUrl);
+
+        if (API_BASE) {
+            const voice = currentVoice();
+            const preloadPromise = (preloadFirst && state.paragraphs.length > 0)
+                ? fetchAudioForCache(0, voice).then(blobUrl => {
+                    const nextAudioEl = audioPool[1 - state.activeAudio];
+                    nextAudioEl.src = blobUrl;
+                    nextAudioEl.preload = 'auto';
+                    return new Promise(r => { nextAudioEl.oncanplaythrough = r; nextAudioEl.load(); });
+                }).then(() => { ServerTTSEngine._preloadedIdx = 0; }).catch(() => {})
+                : Promise.resolve();
+            prefetchPipeline(preloadFirst ? 1 : 0, voice, 8);
+            await preloadPromise;
+        }
+        return true;
+    } catch (e) {
+        setStatus('Lỗi: ' + e.message, true);
+        return false;
+    }
+}
+
+function showPlayerCards() {
+    $('player-card').style.display = 'block';
+    $('voice-card').style.display = 'block';
+    $('controls-card').style.display = 'block';
+    $('seek-card').style.display = 'block';
+}
+
+function updateQuickChapters(url) {
+    const container = $('quick-chapters');
+    if (!container) return;
+
+    const match = url.match(/chuong-(\d+)/i);
+    if (!match) { container.style.display = 'none'; return; }
+
+    const current = parseInt(match[1]);
+    container.style.display = 'flex';
+    const baseUrl = url.replace(/chuong-\d+/i, 'chuong-');
+
+    let html = '<span>Chương nhanh:</span>';
+    for (let i = 1; i <= 5; i++) {
+        html += `<button class="ch-btn${i === current ? ' active' : ''}" onclick="loadAndAutoPlay('${baseUrl}${i}')">Ch.${i}</button>`;
+    }
+    container.innerHTML = html;
+}
+
+/* ============================================================
+   9. PLAYBACK CONTROL
+============================================================ */
+function togglePlay() {
+    if (state.isPlaying) {
+        pauseSpeech();
+    } else {
+        if (state.paragraphs.length === 0) return;
+        if (state.wasPaused) {
+            state.isPlaying = true;
+            state.wasPaused = false;
+            updatePlayButton(true);
+            getCurrentEngine().resume();
+            setStatus(`Đang đọc đoạn ${state.currentIdx + 1}/${state.paragraphs.length}`);
+        } else {
+            playFrom(state.currentIdx);
+        }
+    }
+}
+
+function updatePlayButton(playing) {
+    const btn = $('play-btn');
+    const icon = $('play-icon');
+    const headerBtn = $('header-pause-btn');
+    if (playing) {
+        icon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>';
+        if (headerBtn) headerBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Phát tiếp';
+    } else {
+        icon.innerHTML = '<polygon points="5,3 19,12 5,21" fill="currentColor"/>';
+        if (headerBtn) headerBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Tạm dừng';
+    }
+}
+
+async function playFrom(idx) {
+    if (idx >= state.paragraphs.length) { onChapterEnd(); return; }
+
+    state.wasPaused = false;
+    state.playToken++;
+    const token = state.playToken;
+    state.isPlaying = true;
+    state.currentIdx = idx;
+    updatePlayButton(true);
+
+    updateSeekBar();
+    highlightParagraph(idx);
+    setStatus(`Đang đọc đoạn ${idx + 1}/${state.paragraphs.length}...`);
+
+    getCurrentEngine().play(state.paragraphs[idx], {
+        voice: currentVoice(),
+        rate: currentRate(),
+        pitch: currentPitch(),
+        volume: currentVolume(),
+        _idx: idx,
+        onEnd() {
+            if (token !== state.playToken || !state.isPlaying) return;
+            state.currentIdx++;
+            if (state.currentIdx < state.paragraphs.length) {
+                playFrom(state.currentIdx);
+            } else {
+                onChapterEnd();
+            }
+        },
+        onError(e) {
+            if (token !== state.playToken) return;
+            const isAutoplay = e && (e.name === 'NotAllowedError' || e.type === 'autoplay');
+            if (isAutoplay) {
+                setStatus('Nhấn nút phát để bắt đầu nghe', false);
+                state.wasPaused = true;
+            } else {
+                setStatus('Lỗi TTS: ' + (e && e.message || e), true);
+            }
+            state.isPlaying = false;
+            updatePlayButton(false);
+        },
+    });
+}
+
+function pauseSpeech() {
+    state.isPlaying = false;
+    state.wasPaused = true;
+    getCurrentEngine().pause();
+    updatePlayButton(false);
+    setStatus('Tạm dừng');
+}
+
+function stopSpeech() {
+    state.playToken++;
+    state.isPlaying = false;
+    state.wasPaused = false;
+    state.currentIdx = 0;
+    getCurrentEngine().stop();
+    updatePlayButton(false);
+}
+
+function seekTo(val) {
+    if (state.paragraphs.length === 0) return;
+    const idx = Math.min(Math.floor((val / 100) * state.paragraphs.length), state.paragraphs.length - 1);
+    state.currentIdx = idx;
+    state.wasPaused = false;
+    if (state.isPlaying) {
+        playFrom(idx);
+    } else {
+        updateSeekBar();
+        highlightParagraph(idx);
+    }
+}
+
+function updateSeekBar() {
+    const total = state.paragraphs.length;
+    const current = state.currentIdx;
+    const pct = total > 0 ? (current / total) * 100 : 0;
+
+    $('seek-bar').value = pct;
+    $('seek-pct').textContent = Math.round(pct) + '%';
+    updateSliderFill($('seek-bar'));
+
+    const estTotal = total * 9;
+    const estCurrent = current * 9;
+    $('seek-current-time').textContent = estCurrent + 's';
+    $('seek-total-time').textContent = estTotal + 's';
+
+    if ($('p-chapter-count')) {
+        $('p-chapter-count').textContent = `Chương ${current + 1} / ${total}`;
+    }
+}
+
+function highlightParagraph(idx) {
+    const el = $('content-text');
+    const lines = state.paragraphs.map((p, i) => {
+        if (i === idx) return `<span class="highlight">${escHtml(p)}</span>`;
+        return escHtml(p);
+    });
+    el.innerHTML = lines.join('\n\n');
+    const hl = el.querySelector('.highlight');
+    if (hl) hl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/* ============================================================
+   10. CHAPTER NAVIGATION
+============================================================ */
+function onChapterEnd() {
+    state.isPlaying = false;
+    updatePlayButton(false);
+    setStatus('Hết chương');
+
+    if ($('auto-next-chk').checked && state.nextUrl) {
+        setStatus('Chuyển chương kế tiếp...');
+        const next = state.nextUrl;
+        (async () => {
+            if (state.nextChapterCache && state.nextChapterCache.url === next) {
+                const cached = state.nextChapterCache;
+                state.nextChapterCache = null;
+                state.chapterUrl = next;
+                state.nextUrl = cached.data.next_url || '';
+                $('listen-url').value = next;
+                if (state.historyIdx < 0 || state.history[state.historyIdx] !== next) {
+                    state.historyIdx++;
+                    state.history[state.historyIdx] = next;
+                    state.history.length = state.historyIdx + 1;
+                }
+                $('p-story-name').textContent = cached.data.story_title || '';
+                $('p-chapter-name').textContent = cached.data.title;
+                $('content-text').textContent = cached.data.content;
+                state.paragraphs = cached.paragraphs;
+
+                const savedAudio = {};
+                for (const [idx, audio] of Object.entries(cached.audio)) {
+                    savedAudio[parseInt(idx)] = audio;
+                }
+                invalidatePrefetch();
+                Object.assign(state.prefetched, savedAudio);
+
+                state.currentIdx = 0;
+                updateSeekBar();
+                updateQuickChapters(next);
+
+                const first = state.prefetched[0];
+                const voice = currentVoice();
+                if (first && first.voice === voice) {
+                    const nextAudioEl = audioPool[1 - state.activeAudio];
+                    nextAudioEl.src = first.blobUrl;
+                    nextAudioEl.preload = 'auto';
+                    nextAudioEl.playbackRate = currentRate();
+                    await new Promise(r => { nextAudioEl.oncanplaythrough = r; nextAudioEl.load(); });
+                    ServerTTSEngine._preloadedIdx = 0;
+                }
+
+                setStatus('Sẵn sàng phát');
+                playFrom(0);
+            } else {
+                try {
+                    let data;
+                    if (IS_STATIC) {
+                        data = await clientLoadChapter(next);
+                    } else {
+                        const resp = await fetch(`${API_BASE}/api/chapter?url=${encodeURIComponent(next)}`);
+                        if (!resp.ok) throw new Error((await resp.json()).detail || resp.statusText);
+                        data = await resp.json();
+                    }
+
+                    state.playToken++;
+                    state.wasPaused = false;
+                    state.chapterUrl = next;
+                    state.nextUrl = data.next_url || '';
+                    $('listen-url').value = next;
+                    if (state.historyIdx < 0 || state.history[state.historyIdx] !== next) {
+                        state.historyIdx++;
+                        state.history[state.historyIdx] = next;
+                        state.history.length = state.historyIdx + 1;
+                    }
+                    $('p-story-name').textContent = data.story_title || '';
+                    $('p-chapter-name').textContent = data.title;
+                    $('content-text').textContent = data.content;
+                    state.paragraphs = splitParagraphs(data.content, true);
+                    state.currentIdx = 0;
+                    state.nextChapterCache = null;
+                    invalidatePrefetch();
+                    updateSeekBar();
+                    showPlayerCards();
+                    updateQuickChapters(next);
+
+                    const voice = currentVoice();
+                    if (!IS_STATIC) {
+                        const preloadP = (state.paragraphs.length > 0)
+                            ? fetchAudioForCache(0, voice).then(blobUrl => {
+                                const nextAudioEl = audioPool[1 - state.activeAudio];
+                                nextAudioEl.src = blobUrl;
+                                nextAudioEl.preload = 'auto';
+                                nextAudioEl.playbackRate = currentRate();
+                                return new Promise(r => { nextAudioEl.oncanplaythrough = r; nextAudioEl.load(); });
+                            }).then(() => { ServerTTSEngine._preloadedIdx = 0; }).catch(() => {})
+                            : Promise.resolve();
+                        prefetchPipeline(1, voice, 8);
+                        await preloadP;
+                    }
+
+                    setStatus('Sẵn sàng phát');
+                    playFrom(0);
+                } catch (e) {
+                    setStatus('Lỗi tải chương: ' + e.message, true);
+                }
+            }
+        })();
+    }
+}
+
+function nextChapter() {
+    if (state.nextUrl) loadAndAutoPlay(state.nextUrl);
+    else alert('Không tìm thấy chương sau');
+}
+
+function prevChapter() {
+    if (state.historyIdx > 0) {
+        state.historyIdx--;
+        loadAndAutoPlay(state.history[state.historyIdx]);
+    } else {
+        alert('Không có chương trước');
+    }
+}
+
+/* ============================================================
+   11. DOWNLOAD — WebSocket
+============================================================ */
+function startDownload() {
+    const url = $('dl-url').value.trim();
+    if (!url) return alert('Vui lòng nhập link chương');
+
+    const startCh = parseInt($('dl-start').value) || 1;
+    const maxCh = parseInt($('dl-max').value) || 0;
+
+    $('dl-progress-card').style.display = 'block';
+    $('dl-empty-state').style.display = 'none';
+    $('dl-start-btn').style.display = 'none';
+    $('dl-stop-btn').style.display = 'block';
+    $('dl-log').innerHTML = '';
+    $('dl-results-card').style.display = 'none';
+
+    if (IS_STATIC) {
+        state._dlAbort = false;
+        addLog('Bắt đầu tải (client-side)...');
+        clientStartDownload(url, startCh, maxCh,
+            (progress) => {
+                if (state._dlAbort) return;
+                $('dl-title').textContent = progress.story_title || 'Đang tải...';
+                $('dl-status').textContent =
+                    `Đang tải — Đã tải: ${progress.total_downloaded} chương — ${progress.current_chapter}`;
+                if (progress.total_downloaded > 0) {
+                    const maxEstimate = maxCh > 0 ? maxCh : progress.total_downloaded + 10;
+                    const pct = Math.min((progress.total_downloaded / maxEstimate) * 100, 95);
+                    $('dl-progress-bar').style.width = pct + '%';
+                }
+                addLog(`<span class="ok">✓</span> ${progress.current_chapter}`, true);
+            },
+            (result) => {
+                $('dl-progress-bar').style.width = '100%';
+                $('dl-status').textContent = `Hoàn tất! Đã tải ${result.total} chương.`;
+                $('dl-results-card').style.display = 'block';
+                $('dl-results').innerHTML =
+                    `<p>Truyện: <strong>${result.story_title}</strong></p>
+                     <p>Số chương: ${result.total}</p>
+                     ${result.errors.length ? '<p style="color:#ef4444">Lỗi: ' + result.errors.join('<br>') + '</p>' : ''}`;
+                $('dl-zip-btn').style.display = 'none';
+                downloadDone();
+            },
+            (errMsg) => {
+                addLog(`<span class="error">✗ ${errMsg}</span>`);
+                downloadDone();
+            },
+        );
+        return;
+    }
+
+    const wsUrl = `ws://${location.host}/ws/download`;
+    state.ws = new WebSocket(wsUrl);
+
+    state.ws.onopen = () => {
+        state.ws.send(JSON.stringify({
+            url, start_chapter: startCh, max_chapters: maxCh,
+            workers: 5, min_delay: 1.5, max_delay: 4,
+        }));
+        addLog('Bắt đầu tải...');
+    };
+
+    state.ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'progress') {
+            const d = msg.data;
+            $('dl-title').textContent = d.story_title || 'Đang tải...';
+            $('dl-status').textContent =
+                `${d.status} — Đã tải: ${d.total_downloaded} chương — ${d.current_chapter}`;
+            if (d.total_downloaded > 0) {
+                const maxEstimate = maxCh > 0 ? maxCh : d.total_downloaded + 10;
+                const pct = Math.min((d.total_downloaded / maxEstimate) * 100, 95);
+                $('dl-progress-bar').style.width = pct + '%';
+            }
+            if (d.current_chapter) {
+                addLog(`<span class="ok">✓</span> ${d.current_chapter}`, true);
+            }
+        } else if (msg.type === 'done') {
+            const d = msg.data;
+            state.storyFolder = d.story_dir;
+            $('dl-progress-bar').style.width = '100%';
+            $('dl-status').textContent = `Hoàn tất! Đã tải ${d.total} chương.`;
+            $('dl-results-card').style.display = 'block';
+            $('dl-results').innerHTML =
+                `<p>Truyện: <strong>${d.story_title}</strong></p>
+                 <p>Số chương: ${d.total}</p>
+                 ${d.errors.length ? '<p style="color:#ef4444">Lỗi: ' + d.errors.join('<br>') + '</p>' : ''}`;
+            $('dl-zip-btn').style.display = 'inline-flex';
+            downloadDone();
+        } else if (msg.type === 'error') {
+            addLog(`<span class="error">✗ ${msg.message}</span>`);
+            downloadDone();
+        }
+    };
+
+    state.ws.onerror = () => {
+        addLog('<span class="error">Lỗi kết nối WebSocket</span>');
+        downloadDone();
+    };
+
+    state.ws.onclose = () => downloadDone();
+}
+
+function stopDownload() {
+    if (state.ws) state.ws.close();
+    state._dlAbort = true;
+    downloadDone();
+}
+
+function downloadDone() {
+    $('dl-start-btn').style.display = 'block';
+    $('dl-stop-btn').style.display = 'none';
+    state.ws = null;
+    loadDownloadedList();
+}
+
+function addLog(html, replace) {
+    const box = $('dl-log');
+    if (replace && box.lastElementChild) {
+        box.lastElementChild.innerHTML = html;
+    } else {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        box.appendChild(div);
+    }
+    box.scrollTop = box.scrollHeight;
+}
+
+function downloadZip() {
+    if (IS_STATIC) return;
+    if (state.storyFolder) {
+        window.open(`${API_BASE}/api/download-zip?folder=${encodeURIComponent(state.storyFolder)}`);
+    }
+}
+
+/* ============================================================
+   12. DOWNLOADED LIST
+============================================================ */
+async function loadDownloadedList() {
+    if (!API_BASE) return;
+    try {
+        const resp = await fetch(`${API_BASE}/api/downloaded`);
+        const data = await resp.json();
+        const ul = $('downloaded-list');
+        const card = $('dl-list-card');
+
+        if (data.stories.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+
+        card.style.display = 'block';
+        ul.innerHTML = data.stories.map(s => `
+            <li>
+                <span>${s.folder} (${s.chapters} chương${s.has_epub ? ' + EPUB' : ''})</span>
+                <button class="btn btn-outline btn-sm"
+                    onclick="window.open('${API_BASE}/api/download-zip?folder=${encodeURIComponent(s.folder)}')">
+                    Tải ZIP
+                </button>
+            </li>
+        `).join('');
+    } catch (e) {
+        $('dl-list-card').style.display = 'none';
+    }
+}
+
+/* ============================================================
+   13. SETTINGS FUNCTIONS
+============================================================ */
+function toggleModal(id) {
+    const modal = $(id);
+    modal.classList.toggle('open');
+}
+
+function setTheme(theme) {
+    if (theme === 'auto') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('ui_theme', theme);
+    document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.themeBtn === theme);
+    });
+}
+
+function setAccent(h, s, l, el) {
+    document.documentElement.style.setProperty('--accent-h', h);
+    document.documentElement.style.setProperty('--accent-s', s + '%');
+    document.documentElement.style.setProperty('--accent-l', l + '%');
+    localStorage.setItem('ui_accent', JSON.stringify({ h, s, l }));
+    document.querySelectorAll('.accent-dot').forEach(d => d.classList.remove('active'));
+    if (el) el.classList.add('active');
+}
+
+function setGlassBlur(val) {
+    document.documentElement.style.setProperty('--glass-blur', val + 'px');
+    $('blur-val').textContent = val + 'px';
+    localStorage.setItem('ui_blur', val);
+}
+
+function setGlassOpacity(val) {
+    document.documentElement.style.setProperty('--glass-opacity', (val / 100).toFixed(2));
+    $('opacity-val').textContent = val + '%';
+    localStorage.setItem('ui_opacity', val);
+}
+
+function toggleAnimations(on) {
+    document.body.classList.toggle('no-animations', !on);
+    localStorage.setItem('ui_animations', on);
+}
+
+function setFont(font, el) {
+    document.documentElement.style.setProperty('--font-reading', `'${font}', system-ui, sans-serif`);
+    localStorage.setItem('ui_font', font);
+    document.querySelectorAll('.font-option').forEach(f => f.classList.remove('active'));
+    if (el) el.classList.add('active');
+}
+
+function setFontSize(val) {
+    document.documentElement.style.setProperty('--font-size-reading', val + 'px');
+    $('fontsize-val').textContent = val + 'px';
+    localStorage.setItem('ui_fontsize', val);
+}
+
+function setLineHeight(val) {
+    document.documentElement.style.setProperty('--line-height-reading', val);
+    $('lineheight-val').textContent = parseFloat(val).toFixed(1);
+    localStorage.setItem('ui_lineheight', val);
+}
+
+function setNightMode(mode, el) {
+    document.documentElement.setAttribute('data-night', mode === 'normal' ? '' : mode);
+    localStorage.setItem('ui_night', mode);
+    document.querySelectorAll('.night-option').forEach(n => n.classList.remove('active'));
+    if (el) el.classList.add('active');
+}
+
+/* ============================================================
+   14. TAB SWITCHING
+============================================================ */
+function switchTab(tab) {
+    $('nav-listen').classList.toggle('active', tab === 'listen');
+    $('nav-download').classList.toggle('active', tab === 'download');
+    $('tab-listen').classList.toggle('active', tab === 'listen');
+    $('tab-download').classList.toggle('active', tab === 'download');
+    if (tab === 'download') loadDownloadedList();
+}
+
+/* ============================================================
+   15. INITIALIZATION
+============================================================ */
+(function init() {
+    const rate = localStorage.getItem('tts_rate');
+    if (rate && $('speech-rate')) {
+        $('speech-rate').value = rate;
+        $('rate-val').textContent = parseFloat(rate).toFixed(1) + 'x';
+    }
+
+    const savedPitch = localStorage.getItem('tts_pitch');
+    if (savedPitch) {
+        $('speech-pitch').value = savedPitch;
+        $('pitch-val').textContent = parseFloat(savedPitch).toFixed(1);
+    }
+
+    const savedVolume = localStorage.getItem('tts_volume');
+    if (savedVolume) {
+        $('speech-volume').value = savedVolume;
+        $('volume-val').textContent = savedVolume + '%';
+    }
+
+    const savedAutoNext = localStorage.getItem('tts_auto_next');
+    if (savedAutoNext !== null) {
+        $('auto-next-chk').checked = savedAutoNext !== 'false';
+    }
+
+    const savedTheme = localStorage.getItem('ui_theme');
+    if (savedTheme) setTheme(savedTheme);
+
+    const savedAccent = localStorage.getItem('ui_accent');
+    if (savedAccent) {
+        try {
+            const { h, s, l } = JSON.parse(savedAccent);
+            setAccent(h, s, l, null);
+            document.querySelectorAll('.accent-dot').forEach(d => {
+                const style = d.getAttribute('style');
+                if (style && style.includes(`${h},`)) d.classList.add('active');
+                else d.classList.remove('active');
+            });
+        } catch (e) {}
+    }
+
+    const savedBlur = localStorage.getItem('ui_blur');
+    if (savedBlur) {
+        $('setting-blur').value = savedBlur;
+        setGlassBlur(savedBlur);
+    }
+
+    const savedOpacity = localStorage.getItem('ui_opacity');
+    if (savedOpacity) {
+        $('setting-opacity').value = savedOpacity;
+        setGlassOpacity(savedOpacity);
+    }
+
+    const savedAnim = localStorage.getItem('ui_animations');
+    if (savedAnim !== null) {
+        const on = savedAnim !== 'false';
+        $('setting-animations').checked = on;
+        toggleAnimations(on);
+    }
+
+    const savedFont = localStorage.getItem('ui_font');
+    if (savedFont) {
+        setFont(savedFont, null);
+        document.querySelectorAll('.font-option').forEach(f => {
+            if (f.textContent.trim() === savedFont) f.classList.add('active');
+            else f.classList.remove('active');
+        });
+    }
+
+    const savedFontSize = localStorage.getItem('ui_fontsize');
+    if (savedFontSize) {
+        $('setting-fontsize').value = savedFontSize;
+        setFontSize(savedFontSize);
+    }
+
+    const savedLineHeight = localStorage.getItem('ui_lineheight');
+    if (savedLineHeight) {
+        $('setting-lineheight').value = savedLineHeight;
+        setLineHeight(savedLineHeight);
+    }
+
+    const savedNight = localStorage.getItem('ui_night');
+    if (savedNight) {
+        setNightMode(savedNight, null);
+        document.querySelectorAll('.night-option').forEach(n => {
+            const modes = { 'normal': 'Bình thường', 'sepia': 'Sepia', 'dim': 'Đêm' };
+            for (const [mode, text] of Object.entries(modes)) {
+                if (n.textContent.includes(text) && mode === savedNight) n.classList.add('active');
+            }
+        });
+    }
+
+    document.querySelectorAll('.range-slider').forEach(s => {
+        updateSliderFill(s);
+        s.addEventListener('input', () => updateSliderFill(s));
+    });
+})();
+
+loadVoices();
+if (API_BASE) loadDownloadedList();
+
+/* Khi dán link vào ô URL → tự động tải và mở full giao diện */
+$('listen-url').addEventListener('paste', (e) => {
+    setTimeout(() => {
+        const url = $('listen-url').value.trim();
+        if (url) loadAndAutoPlay(url);
+    }, 0);
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    if (e.key === 'Escape') {
+        const modal = $('settings-modal');
+        if (modal.classList.contains('open')) toggleModal('settings-modal');
+    }
+});
+
+/* ============================================================
+   ANIMATION SYSTEM — JS điều khiển hiệu ứng
+   Quản lý tốc độ, easing, nhóm hiệu ứng, ripple, scroll reveal,
+   parallax. Lưu/khôi phục từ localStorage.
+   Không sửa/xoá bất kỳ logic sẵn có nào.
+============================================================ */
+(function () {
+    const root = document.documentElement;
+    const body = document.body;
+
+    /* --- Bản đồ tốc độ → giá trị ms --- */
+    const SPEED_MAP = {
+        off:    { fast: '0ms',   normal: '0ms',   slow: '0ms' },
+        slow:   { fast: '250ms', normal: '400ms', slow: '600ms' },
+        normal: { fast: '150ms', normal: '250ms', slow: '400ms' },
+        fast:   { fast: '80ms',  normal: '120ms', slow: '200ms' }
+    };
+
+    /* --- Bản đồ easing → CSS value --- */
+    const EASE_MAP = {
+        'ease-out':     'cubic-bezier(0.22, 1, 0.36, 1)',
+        'ease-in-out':  'cubic-bezier(0.4, 0, 0.2, 1)',
+        'spring':       'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'linear':       'linear'
+    };
+
+    /* --- Áp dụng tốc độ --- */
+    window.setAnimSpeed = function (speed, el) {
+        const vals = SPEED_MAP[speed];
+        if (!vals) return;
+        root.style.setProperty('--anim-speed-fast', vals.fast);
+        root.style.setProperty('--anim-speed', vals.normal);
+        root.style.setProperty('--anim-speed-slow', vals.slow);
+        root.dataset.animOff = (speed === 'off') ? 'true' : 'false';
+        localStorage.setItem('anim_speed', speed);
+
+        document.querySelectorAll('.anim-speed-btn').forEach(b => b.classList.remove('active'));
+        if (el) el.classList.add('active');
+    };
+
+    /* --- Áp dụng easing --- */
+    window.setAnimEasing = function (type) {
+        const val = EASE_MAP[type];
+        if (!val) return;
+        root.style.setProperty('--anim-ease', val);
+        if (type === 'spring') {
+            root.style.setProperty('--anim-ease-spring', EASE_MAP['spring']);
+        } else {
+            root.style.setProperty('--anim-ease-spring', val);
+        }
+        localStorage.setItem('anim_easing', type);
+        syncEaseTriggerLabel(type);
+    };
+
+    /* --- Easing custom dropdown (giống voice dropdown) --- */
+    const EASE_OPTIONS = [
+        { value: 'ease-out',    label: 'Ease-out',    desc: 'Tự nhiên' },
+        { value: 'ease-in-out', label: 'Ease-in-out', desc: 'Mềm mại' },
+        { value: 'spring',      label: 'Spring',      desc: 'Nảy nhẹ' },
+        { value: 'linear',      label: 'Linear',      desc: 'Đều' }
+    ];
+
+    function syncEaseTriggerLabel(type) {
+        const trigger = document.getElementById('ease-dropdown-trigger');
+        if (!trigger) return;
+        const opt = EASE_OPTIONS.find(o => o.value === type);
+        trigger.textContent = opt ? opt.label + ' (' + opt.desc.toLowerCase() + ')' : 'Chọn kiểu';
+    }
+
+    function buildEaseDropdownList() {
+        const list = document.getElementById('ease-dropdown-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const sel = document.getElementById('anim-ease-select');
+        const current = sel ? sel.value : 'ease-out';
+        EASE_OPTIONS.forEach(opt => {
+            const div = document.createElement('div');
+            div.className = 'ease-dropdown-option';
+            if (opt.value === current) div.classList.add('selected');
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = opt.label;
+            div.appendChild(nameSpan);
+            const descSpan = document.createElement('span');
+            descSpan.className = 'ease-opt-desc';
+            descSpan.textContent = opt.desc;
+            div.appendChild(descSpan);
+            div.onclick = function() { selectEaseOption(opt.value, div); };
+            list.appendChild(div);
+        });
+    }
+
+    function selectEaseOption(value, el) {
+        const sel = document.getElementById('anim-ease-select');
+        if (sel) sel.value = value;
+        setAnimEasing(value);
+        document.querySelectorAll('.ease-dropdown-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        closeEaseDropdown();
+    }
+
+    window.toggleEaseDropdown = function() {
+        const wrap = document.getElementById('ease-dropdown-wrap');
+        if (wrap.classList.contains('open')) {
+            closeEaseDropdown();
+        } else {
+            wrap.classList.add('open');
+            buildEaseDropdownList();
+        }
+    };
+
+    function closeEaseDropdown() {
+        const wrap = document.getElementById('ease-dropdown-wrap');
+        if (wrap) wrap.classList.remove('open');
+    }
+
+    document.addEventListener('click', function(e) {
+        const wrap = document.getElementById('ease-dropdown-wrap');
+        if (wrap && !wrap.contains(e.target)) closeEaseDropdown();
+    });
+
+    /* --- Toggle từng nhóm hiệu ứng bằng class trên body --- */
+    window.toggleAnimGroup = function (group, on) {
+        body.classList.toggle('anim-' + group, on);
+        localStorage.setItem('anim_group_' + group, on);
+    };
+
+    /* --- RIPPLE EFFECT — tạo sóng lan từ điểm click --- */
+    function initRipple() {
+        document.addEventListener('click', function (e) {
+            if (!body.classList.contains('anim-micro')) return;
+            const btn = e.target.closest('.btn-primary, .play-main-btn');
+            if (!btn) return;
+
+            const rect = btn.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height) * 2;
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+
+            const ripple = document.createElement('span');
+            ripple.className = 'anim-ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+
+            btn.appendChild(ripple);
+            ripple.addEventListener('animationend', function () {
+                ripple.remove();
+            });
+        });
+    }
+
+    /* --- SCROLL REVEAL — IntersectionObserver fade-in + slide-up 1 lần --- */
+    function initScrollReveal() {
+        if (!('IntersectionObserver' in window)) return;
+
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('anim-revealed');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -30px 0px' });
+
+        function observeElements() {
+            document.querySelectorAll('.anim-reveal:not(.anim-revealed)').forEach(function (el) {
+                observer.observe(el);
+            });
+        }
+
+        observeElements();
+
+        const mo = new MutationObserver(observeElements);
+        mo.observe(body, { childList: true, subtree: true });
+    }
+
+    /* --- PARALLAX — nền cuộn chậm hơn --- */
+    function initParallax() {
+        let ticking = false;
+        window.addEventListener('scroll', function () {
+            if (!body.classList.contains('anim-scroll')) return;
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function () {
+                const scrollY = window.scrollY;
+                const blobs = document.querySelector('.bg-blobs');
+                if (blobs) {
+                    blobs.style.transform = 'translateY(' + (scrollY * 0.15) + 'px)';
+                }
+                ticking = false;
+            });
+        }, { passive: true });
+    }
+
+    /* --- Áp dụng class anim-reveal lên các phần tử chính (ngoài modal) --- */
+    function markRevealElements() {
+        const selectors = [
+            '.app-wrapper > .glass-card',
+            '.chapter-item',
+            '.dl-item'
+        ];
+        selectors.forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                if (!el.closest('.modal-overlay') && !el.classList.contains('anim-reveal')) {
+                    el.classList.add('anim-reveal');
+                }
+            });
+        });
+
+        document.querySelectorAll('.chapter-list').forEach(function (list) {
+            if (!list.classList.contains('anim-stagger')) {
+                list.classList.add('anim-stagger');
+            }
+        });
+    }
+
+    /* --- Khôi phục tất cả cài đặt animation từ localStorage --- */
+    function restoreAnimSettings() {
+        const speed = localStorage.getItem('anim_speed') || 'normal';
+        const speedBtn = document.querySelector('.anim-speed-btn[data-speed="' + speed + '"]');
+        setAnimSpeed(speed, speedBtn);
+
+        const easing = localStorage.getItem('anim_easing') || 'ease-out';
+        const easeSel = $('anim-ease-select');
+        if (easeSel) easeSel.value = easing;
+        setAnimEasing(easing);
+
+        const groups = ['micro', 'page', 'loading', 'scroll'];
+        groups.forEach(function (g) {
+            const saved = localStorage.getItem('anim_group_' + g);
+            const on = saved !== null ? saved !== 'false' : true;
+            const cb = $('anim-group-' + g);
+            if (cb) cb.checked = on;
+            toggleAnimGroup(g, on);
+        });
+
+        const masterOn = localStorage.getItem('ui_animations');
+        const animControls = $('anim-controls');
+        if (animControls) {
+            animControls.style.display = (masterOn === 'false') ? 'none' : '';
+        }
+    }
+
+    /* --- Mở rộng toggleAnimations gốc (không sửa, chỉ hook thêm) --- */
+    const origToggleAnimations = window.toggleAnimations;
+    window.toggleAnimations = function (on) {
+        origToggleAnimations(on);
+        const animControls = $('anim-controls');
+        if (animControls) {
+            animControls.style.display = on ? '' : 'none';
+        }
+        if (!on) {
+            ['micro', 'page', 'loading', 'scroll'].forEach(function (g) {
+                body.classList.remove('anim-' + g);
+            });
+        } else {
+            ['micro', 'page', 'loading', 'scroll'].forEach(function (g) {
+                const cb = $('anim-group-' + g);
+                if (cb && cb.checked) body.classList.add('anim-' + g);
+            });
+        }
+    };
+
+    /* --- INIT --- */
+    restoreAnimSettings();
+    initRipple();
+    initScrollReveal();
+    initParallax();
+
+    setTimeout(markRevealElements, 100);
+})();
+
+/* ============================================================
+   BACKGROUND IMAGE — Import ảnh nền + 8 kiểu blur
+============================================================ */
+(function () {
+    /* --- refs --- */
+    const bgImageEl     = $('bg-custom-image');
+    const bgOverlayEl   = $('bg-custom-overlay');
+    const bgCanvas      = $('bg-blur-canvas');
+    const bgFileInput   = $('bg-file-input');
+    const bgPreview     = $('bg-preview-thumb');
+    const bgPreviewOver = $('bg-preview-overlay');
+    const bgRemoveBtn   = $('bg-remove-btn');
+    const bgBlurTitle   = $('bg-blur-title');
+    const bgBlurGrid    = $('bg-blur-type-grid');
+    const bgSliderWrap  = $('bg-blur-slider-wrap');
+    const bgSlider      = $('bg-blur-slider');
+    const bgBlurValue   = $('bg-blur-value');
+
+    /* --- state --- */
+    let bgDataUrl   = null;
+    let bgBlurType  = 'gaussian';
+    let bgBlurLevel = 10;
+    let bgImgObj    = null;
+
+    /* --- IndexedDB cho ảnh lớn (localStorage giới hạn ~5MB) --- */
+    const DB_NAME = 'bgImageStore';
+    const DB_STORE = 'images';
+    function bgDbOpen() {
+        return new Promise(function (resolve, reject) {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = function () { req.result.createObjectStore(DB_STORE); };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+        });
+    }
+    function bgDbSave(dataUrl) {
+        bgDbOpen().then(function (db) {
+            const tx = db.transaction(DB_STORE, 'readwrite');
+            tx.objectStore(DB_STORE).put(dataUrl, 'bg');
+            tx.oncomplete = function () { db.close(); };
+        }).catch(function () {});
+    }
+    function bgDbLoad() {
+        return bgDbOpen().then(function (db) {
+            return new Promise(function (resolve) {
+                const tx = db.transaction(DB_STORE, 'readonly');
+                const req = tx.objectStore(DB_STORE).get('bg');
+                req.onsuccess = function () { resolve(req.result || null); };
+                req.onerror = function () { resolve(null); };
+                tx.oncomplete = function () { db.close(); };
+            });
+        }).catch(function () { return null; });
+    }
+    function bgDbClear() {
+        bgDbOpen().then(function (db) {
+            const tx = db.transaction(DB_STORE, 'readwrite');
+            tx.objectStore(DB_STORE).delete('bg');
+            tx.oncomplete = function () { db.close(); };
+        }).catch(function () {});
+    }
+
+    /* --- helpers --- */
+    function bgShowControls(show) {
+        const d = show ? '' : 'none';
+        bgRemoveBtn.style.display  = show ? '' : 'none';
+        bgBlurTitle.style.display  = d;
+        bgBlurGrid.style.display   = d;
+        bgSliderWrap.style.display = d;
+        if (show) { bgPreview.classList.add('active'); }
+        else      { bgPreview.classList.remove('active'); }
+    }
+
+    /* --- file import --- */
+    bgFileInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            bgDataUrl = ev.target.result;
+            bgDbSave(bgDataUrl);
+            localStorage.setItem('bg_has_image', '1');
+            bgLoadImage(bgDataUrl);
+        };
+        reader.readAsDataURL(file);
+        bgFileInput.value = '';
+    });
+
+    function bgLoadImage(dataUrl) {
+        bgDataUrl = dataUrl;
+        document.body.classList.add('has-custom-bg');
+        bgImageEl.style.backgroundImage = 'url("' + dataUrl + '")';
+        bgImageEl.classList.add('active');
+        bgOverlayEl.classList.add('active');
+        bgPreview.style.backgroundImage = 'url("' + dataUrl + '")';
+        bgShowControls(true);
+        bgImgObj = new Image();
+        bgImgObj.onload = function () { bgApplyBlur(); };
+        bgImgObj.src = dataUrl;
+    }
+
+    /* --- remove --- */
+    window.bgRemoveImage = function () {
+        bgDataUrl = null;
+        bgImgObj  = null;
+        localStorage.removeItem('bg_has_image');
+        localStorage.removeItem('bg_blur_type');
+        localStorage.removeItem('bg_blur_level');
+        bgDbClear();
+        document.body.classList.remove('has-custom-bg');
+        bgImageEl.style.backgroundImage = '';
+        bgImageEl.classList.remove('active');
+        bgOverlayEl.classList.remove('active');
+        bgCanvas.style.display = 'none';
+        bgOverlayEl.style.backdropFilter = '';
+        bgOverlayEl.style.webkitBackdropFilter = '';
+        bgOverlayEl.style.background = '';
+        bgPreview.style.backgroundImage = '';
+        bgPreviewOver.style.cssText = '';
+        bgShowControls(false);
+    };
+
+    /* --- blur type buttons --- */
+    bgBlurGrid.addEventListener('click', function (e) {
+        const btn = e.target.closest('.bg-blur-type-btn');
+        if (!btn) return;
+        bgBlurGrid.querySelectorAll('.bg-blur-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        bgBlurType = btn.dataset.blur;
+        localStorage.setItem('bg_blur_type', bgBlurType);
+        bgApplyBlur();
+    });
+
+    /* --- slider --- */
+    bgSlider.addEventListener('input', function () {
+        bgBlurLevel = parseInt(this.value, 10);
+        bgBlurValue.textContent = bgBlurLevel;
+        localStorage.setItem('bg_blur_level', bgBlurLevel);
+        bgApplyBlur();
+    });
+
+    /* === APPLY BLUR — routes to CSS or canvas depending on type === */
+    function bgApplyBlur() {
+        /* reset all overlay styles */
+        bgOverlayEl.style.backdropFilter = '';
+        bgOverlayEl.style.webkitBackdropFilter = '';
+        bgOverlayEl.style.background = '';
+        bgCanvas.style.display = 'none';
+
+        /* reset preview overlay */
+        bgPreviewOver.style.backdropFilter = '';
+        bgPreviewOver.style.webkitBackdropFilter = '';
+        bgPreviewOver.style.background = '';
+        bgPreviewOver.style.filter = '';
+
+        if (!bgDataUrl) return;
+
+        const lvl = bgBlurLevel;
+
+        switch (bgBlurType) {
+            case 'gaussian':
+                bgOverlayEl.style.backdropFilter = `blur(${lvl}px)`;
+                bgOverlayEl.style.webkitBackdropFilter = `blur(${lvl}px)`;
+                bgPreviewOver.style.backdropFilter = `blur(${lvl * 0.3}px)`;
+                break;
+
+            case 'frosted':
+                bgOverlayEl.style.backdropFilter = `blur(${lvl}px) saturate(1.4) brightness(1.05)`;
+                bgOverlayEl.style.webkitBackdropFilter = `blur(${lvl}px) saturate(1.4) brightness(1.05)`;
+                bgOverlayEl.style.background = 'rgba(255,255,255,0.08)';
+                bgPreviewOver.style.backdropFilter = `blur(${lvl * 0.3}px) saturate(1.4)`;
+                bgPreviewOver.style.background = 'rgba(255,255,255,0.08)';
+                break;
+
+            case 'box':
+            case 'motion':
+            case 'radial':
+            case 'bokeh':
+            case 'tiltshift':
+            case 'pixelate':
+                bgDrawCanvasBlur(bgBlurType, lvl);
+                break;
+        }
+    }
+
+    /* === CANVAS-BASED blur effects === */
+    function bgDrawCanvasBlur(type, level) {
+        if (!bgImgObj || !bgImgObj.complete) return;
+
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        bgCanvas.width  = W;
+        bgCanvas.height = H;
+        bgCanvas.style.display = 'block';
+
+        const ctx = bgCanvas.getContext('2d');
+        /* draw image covering viewport (like background-size: cover) */
+        const imgR = bgImgObj.width / bgImgObj.height;
+        const scrR = W / H;
+        let sw, sh, sx, sy;
+        if (imgR > scrR) {
+            sh = bgImgObj.height; sw = sh * scrR;
+            sx = (bgImgObj.width - sw) / 2; sy = 0;
+        } else {
+            sw = bgImgObj.width; sh = sw / scrR;
+            sx = 0; sy = (bgImgObj.height - sh) / 2;
+        }
+
+        ctx.clearRect(0, 0, W, H);
+
+        switch (type) {
+            case 'box':
+                ctx.filter = `blur(${level}px)`;
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, -level, -level, W + level * 2, H + level * 2);
+                ctx.filter = 'none';
+                /* box look: slight step quantisation */
+                if (level > 2) {
+                    const step = Math.max(2, Math.floor(level / 3));
+                    const small = ctx.getImageData(0, 0, W, H);
+                    const d = small.data;
+                    for (let y = 0; y < H; y += step) {
+                        for (let x = 0; x < W; x += step) {
+                            const i = (y * W + x) * 4;
+                            for (let dy = 0; dy < step && y + dy < H; dy++) {
+                                for (let dx = 0; dx < step && x + dx < W; dx++) {
+                                    const j = ((y + dy) * W + (x + dx)) * 4;
+                                    d[j] = d[i]; d[j+1] = d[i+1]; d[j+2] = d[i+2];
+                                }
+                            }
+                        }
+                    }
+                    ctx.putImageData(small, 0, 0);
+                }
+                break;
+
+            case 'motion':
+                /* motion blur = multiple offset draws with alpha */
+                ctx.globalAlpha = 1;
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, 0, 0, W, H);
+                const steps = Math.min(level, 20);
+                ctx.globalAlpha = 0.6 / steps;
+                for (let i = 1; i <= steps; i++) {
+                    const off = (i / steps) * level * 1.5;
+                    ctx.drawImage(bgImgObj, sx, sy, sw, sh, off, 0, W, H);
+                    ctx.drawImage(bgImgObj, sx, sy, sw, sh, -off, 0, W, H);
+                }
+                ctx.globalAlpha = 1;
+                break;
+
+            case 'radial': {
+                /* draw sharp first, then apply radial gradient mask over blurred version */
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, 0, 0, W, H);
+                /* create blurred version in offscreen */
+                const off = document.createElement('canvas');
+                off.width = W; off.height = H;
+                const octx = off.getContext('2d');
+                octx.filter = `blur(${level}px)`;
+                octx.drawImage(bgImgObj, sx, sy, sw, sh, -level, -level, W + level*2, H + level*2);
+                octx.filter = 'none';
+                /* radial gradient mask — center sharp, edges blurry */
+                const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.55);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(0.3, 'rgba(0,0,0,0)');
+                grad.addColorStop(1, 'rgba(0,0,0,1)');
+                ctx.save();
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, W, H);
+                ctx.globalCompositeOperation = 'source-atop';
+                ctx.drawImage(off, 0, 0);
+                ctx.restore();
+                /* blend */
+                ctx.globalAlpha = 0.8;
+                ctx.drawImage(off, 0, 0);
+                ctx.globalAlpha = 1;
+                break;
+            }
+
+            case 'bokeh': {
+                /* lens / bokeh = big blur + highlight circles */
+                ctx.filter = `blur(${level}px)`;
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, -level, -level, W + level*2, H + level*2);
+                ctx.filter = 'none';
+                /* bright bokeh spots */
+                const bokehCount = Math.floor(level * 2) + 8;
+                for (let i = 0; i < bokehCount; i++) {
+                    const bx = Math.random() * W;
+                    const by = Math.random() * H;
+                    const br = Math.random() * level * 1.2 + 4;
+                    const ga = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+                    ga.addColorStop(0, `rgba(255,255,255,${0.06 + Math.random() * 0.08})`);
+                    ga.addColorStop(0.7, `rgba(255,255,255,${0.02})`);
+                    ga.addColorStop(1, 'rgba(255,255,255,0)');
+                    ctx.beginPath();
+                    ctx.arc(bx, by, br, 0, Math.PI * 2);
+                    ctx.fillStyle = ga;
+                    ctx.fill();
+                }
+                break;
+            }
+
+            case 'tiltshift': {
+                /* sharp center band, blurred top & bottom */
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, 0, 0, W, H);
+                const sharp = ctx.getImageData(0, 0, W, H);
+                ctx.filter = `blur(${level}px)`;
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, -level, -level, W + level*2, H + level*2);
+                ctx.filter = 'none';
+                /* gradual mask: top & bottom blurred, center sharp */
+                const bandH = H * 0.3;
+                const centerY = H / 2;
+                const blurred = ctx.getImageData(0, 0, W, H);
+                const sd = sharp.data;
+                const bd = blurred.data;
+                for (let y = 0; y < H; y++) {
+                    const dist = Math.abs(y - centerY);
+                    const t = Math.max(0, Math.min(1, (dist - bandH * 0.5) / (bandH * 0.5)));
+                    for (let x = 0; x < W; x++) {
+                        const i = (y * W + x) * 4;
+                        bd[i]   = sd[i]   * (1 - t) + bd[i]   * t;
+                        bd[i+1] = sd[i+1] * (1 - t) + bd[i+1] * t;
+                        bd[i+2] = sd[i+2] * (1 - t) + bd[i+2] * t;
+                    }
+                }
+                ctx.putImageData(blurred, 0, 0);
+                break;
+            }
+
+            case 'pixelate': {
+                const block = Math.max(2, level);
+                /* draw small then scale up = pixel mosaic */
+                const smallW = Math.ceil(W / block);
+                const smallH = Math.ceil(H / block);
+                ctx.imageSmoothingEnabled = false;
+                /* draw tiny */
+                ctx.drawImage(bgImgObj, sx, sy, sw, sh, 0, 0, smallW, smallH);
+                /* scale back up */
+                ctx.drawImage(bgCanvas, 0, 0, smallW, smallH, 0, 0, W, H);
+                ctx.imageSmoothingEnabled = true;
+                break;
+            }
+        }
+
+        /* update preview thumbnail too */
+        bgPreviewOver.style.background = '';
+        bgPreviewOver.style.backdropFilter = '';
+        try {
+            const thumbUrl = bgCanvas.toDataURL('image/jpeg', 0.3);
+            bgPreviewOver.style.background = `url("${thumbUrl}") center/cover`;
+            bgPreviewOver.style.opacity = '0.7';
+        } catch (_) { /* ignore cross-origin */ }
+    }
+
+    /* --- resize listener for canvas effects --- */
+    let bgResizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(bgResizeTimer);
+        bgResizeTimer = setTimeout(function () {
+            if (bgDataUrl && ['box','motion','radial','bokeh','tiltshift','pixelate'].includes(bgBlurType)) {
+                bgApplyBlur();
+            }
+        }, 200);
+    });
+
+    /* === INIT — restore from IndexedDB + localStorage === */
+    const savedType  = localStorage.getItem('bg_blur_type');
+    const savedLevel = localStorage.getItem('bg_blur_level');
+
+    if (savedType) {
+        bgBlurType = savedType;
+        bgBlurGrid.querySelectorAll('.bg-blur-type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.blur === bgBlurType);
+        });
+    }
+    if (savedLevel !== null) {
+        bgBlurLevel = parseInt(savedLevel, 10);
+        bgSlider.value = bgBlurLevel;
+        bgBlurValue.textContent = bgBlurLevel;
+    }
+    if (localStorage.getItem('bg_has_image') === '1') {
+        bgDbLoad().then(function (dataUrl) {
+            if (dataUrl) bgLoadImage(dataUrl);
+        });
+    }
+
+    /* ============================================================
+       AUTO-CONTRAST — Phân tích luminance ảnh nền, tự động đổi
+       màu chữ/icon để đảm bảo tương phản WCAG AA (≥ 4.5:1).
+
+       Cách tính:
+       1. Vẽ ảnh nền (đã blur nếu có) lên canvas ẩn nhỏ (64×64px).
+       2. Đọc pixel data, tính luminance trung bình toàn ảnh theo:
+            L = 0.299*R + 0.587*G + 0.114*B  (phạm vi 0–255)
+       3. Chuẩn hoá L về [0,1]. Nếu L ≥ 0.5 → nền sáng, chữ tối.
+          Nếu L < 0.5 → nền tối, chữ sáng.
+       4. Toggle class body.bg-adapt-light / body.bg-adapt-dark
+          → CSS variables + scrim + text-shadow tự điều chỉnh.
+       5. Gọi lại mỗi khi đổi ảnh hoặc đổi mức blur.
+    ============================================================ */
+
+    /* Canvas ẩn dùng để tính luminance — kích thước nhỏ cho hiệu suất */
+    const lumCanvas = document.createElement('canvas');
+    lumCanvas.width  = 64;
+    lumCanvas.height = 64;
+    const lumCtx = lumCanvas.getContext('2d', { willReadFrequently: true });
+
+    /**
+     * bgAnalyzeLuminance — phân tích độ sáng trung bình của ảnh nền hiện tại.
+     * Nếu đang dùng canvas blur (box, motion…) → lấy pixel từ bgCanvas.
+     * Nếu dùng CSS blur (gaussian, frosted) → vẽ ảnh gốc lên lumCanvas.
+     * Kết quả: toggle class bg-adapt-light / bg-adapt-dark trên body.
+     */
+    function bgAnalyzeLuminance() {
+        if (!bgImgObj || !bgImgObj.complete) return;
+
+        const W = lumCanvas.width;
+        const H = lumCanvas.height;
+        lumCtx.clearRect(0, 0, W, H);
+
+        /* Nếu blur canvas đang hiện (box/motion/radial…), lấy trực tiếp từ đó
+           vì nó phản ánh đúng những gì người dùng nhìn thấy sau blur. */
+        if (bgCanvas.style.display !== 'none' && bgCanvas.width > 0 && bgCanvas.height > 0) {
+            lumCtx.drawImage(bgCanvas, 0, 0, W, H);
+        } else {
+            /* CSS blur (gaussian/frosted) hoặc chưa blur → vẽ ảnh gốc */
+            lumCtx.drawImage(bgImgObj, 0, 0, W, H);
+        }
+
+        /* Đọc tất cả pixel */
+        let imageData;
+        try {
+            imageData = lumCtx.getImageData(0, 0, W, H);
+        } catch (_) {
+            /* cross-origin → fallback: giữ theme mặc định (dark) */
+            bgSetAdaptClass('dark');
+            return;
+        }
+
+        const pixels = imageData.data; /* [R,G,B,A, R,G,B,A, …] */
+        let totalLum = 0;
+        const pixelCount = pixels.length / 4;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            /* Công thức luminance theo chuẩn ITU-R BT.601:
+               L = 0.299*R + 0.587*G + 0.114*B */
+            totalLum += 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+        }
+
+        /* Chuẩn hoá về [0, 1] */
+        const avgLuminance = totalLum / pixelCount / 255;
+
+        /* Ngưỡng 0.5: nền sáng (≥0.5) → chữ tối, nền tối (<0.5) → chữ sáng */
+        const mode = avgLuminance >= 0.5 ? 'light' : 'dark';
+        bgSetAdaptClass(mode);
+    }
+
+    /**
+     * bgSetAdaptClass — toggle class trên body để CSS tự điều chỉnh.
+     * @param {'light'|'dark'} mode
+     */
+    function bgSetAdaptClass(mode) {
+        document.body.classList.remove('bg-adapt-light', 'bg-adapt-dark');
+        document.body.classList.add('bg-adapt-' + mode);
+    }
+
+    /**
+     * bgClearAdaptClass — xoá tất cả class auto-contrast khi bỏ ảnh nền.
+     */
+    function bgClearAdaptClass() {
+        document.body.classList.remove('bg-adapt-light', 'bg-adapt-dark');
+    }
+
+    /* --- Hook vào bgApplyBlur: sau khi blur xong, phân tích lại luminance --- */
+    const _origApplyBlur = bgApplyBlur;
+    bgApplyBlur = function () {
+        _origApplyBlur();
+        /* Delay nhỏ cho canvas effects render xong */
+        setTimeout(bgAnalyzeLuminance, 50);
+    };
+
+    /* --- Hook vào bgLoadImage: phân tích khi ảnh mới được load --- */
+    const _origLoadImage = bgLoadImage;
+    bgLoadImage = function (dataUrl) {
+        _origLoadImage(dataUrl);
+        /* bgImgObj.onload trong _origLoadImage đã gọi bgApplyBlur
+           → bgApplyBlur hook sẽ gọi bgAnalyzeLuminance tự động. */
+    };
+
+    /* --- Hook vào bgRemoveImage: xoá class adapt khi bỏ nền --- */
+    const _origRemoveImage = window.bgRemoveImage;
+    window.bgRemoveImage = function () {
+        _origRemoveImage();
+        bgClearAdaptClass();
+    };
+})();
+
+</script>
+</body>
+</html>
